@@ -3,6 +3,7 @@ import { StartScene } from './scenes/StartScene.js';
 import { Web3Scene } from './scenes/Web3Scene.js';
 import { BattleScene } from './scenes/BattleScene.js';
 import { InventoryScene } from './scenes/InventoryScene.js';
+import { GardenScene } from './scenes/GardenScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -18,8 +19,15 @@ const config = {
         StartScene,
         Web3Scene,
         BattleScene,
-        InventoryScene
+        InventoryScene,
+        GardenScene
     ],
+    physics: {
+        default: 'arcade',
+        arcade: {
+            debug: false
+        }
+    },
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH

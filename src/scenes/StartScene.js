@@ -25,26 +25,34 @@ export class StartScene extends Phaser.Scene {
             { fontFamily: 'Futile', fontSize: '20px', color: '#aaaaaa' }
         ).setOrigin(0.5);
 
-        // Start Local Demo Button
+        // Start Local Demo Button (Game A)
         this.createButton(
             this.cameras.main.centerX,
-            this.cameras.main.centerY + 20,
-            'Start Local Demo',
+            this.cameras.main.centerY - 20,
+            'Start Local Demo (Battle)',
             () => this.scene.start('BattleScene')
         );
 
         // My Hashmon (Inventory) Button
         this.createButton(
             this.cameras.main.centerX,
-            this.cameras.main.centerY + 100,
+            this.cameras.main.centerY + 60,
             'My Hashmon',
             () => this.scene.start('InventoryScene')
+        );
+        
+        // Enter Garden Button (Game B)
+        this.createButton(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY + 140,
+            'Hashmon Garden',
+            () => this.scene.start('GardenScene')
         );
 
         // Connect Wallet Button
         this.createButton(
             this.cameras.main.centerX,
-            this.cameras.main.centerY + 180,
+            this.cameras.main.centerY + 220,
             'Connect Wallet',
             () => this.scene.start('Web3Scene')
         );

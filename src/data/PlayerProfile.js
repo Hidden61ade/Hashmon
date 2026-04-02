@@ -32,6 +32,7 @@ export class PlayerProfile {
 
         // ── Profile ──
         this.username = 'Trainer';
+        this.coins = 0;                // Garden coins
         this.elo = 1150;               // Starting rating
         this.wins = 12;
         this.losses = 5;

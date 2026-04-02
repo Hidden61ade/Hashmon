@@ -23,8 +23,10 @@ export class PreloaderScene extends Phaser.Scene {
             this.fontLoaded = true; // Proceed even on failure
         });
 
-        // ── Hashmon Sprites ──
+        // ── Hashmon Sprites & Assets ──
         this.load.image('space_bg', './assets/space.png');
+        this.load.image('garden_bg', './assets/Garden.png');
+        this.load.image('coin', './assets/coin.png');
         this.load.image('water_rat', './assets/WaterRat.png');
         this.load.image('fire_dragon', './assets/FireDragon.png');
 

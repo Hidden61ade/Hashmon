@@ -172,6 +172,13 @@ export const SPECIES = {
             spDef: 50,
             speed: 58,
         },
+        baseNormalizedStats: {
+            strength: 0.48, // maps to atk
+            vitality: 0.55, // maps to hp
+            agility: 0.58,  // maps to speed and movespeed in garden
+            dexterity: 0.45, // maps to def
+            intelligence: 0.62 // maps to spAtk
+        },
         // The 4 moves this species knows
         moveKeys: ['splash', 'aquaJet', 'bite', 'defend'],
     },
@@ -187,6 +194,13 @@ export const SPECIES = {
             spAtk: 70,
             spDef: 50,
             speed: 55,
+        },
+        baseNormalizedStats: {
+            strength: 0.65,
+            vitality: 0.60,
+            agility: 0.55,
+            dexterity: 0.50,
+            intelligence: 0.70
         },
         moveKeys: ['ember', 'fireFang', 'dragonBreath', 'intimidate'],
     },
