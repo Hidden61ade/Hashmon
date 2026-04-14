@@ -12,6 +12,7 @@
  */
 import { playerProfile, RANKS } from '../data/PlayerProfile.js';
 import { SPECIES } from '../data/HashmonData.js';
+import { CONTRACTS, IPFS_GATEWAY } from '../data/ContractConfig.js';
 
 export class Web3Scene extends Phaser.Scene {
     constructor() {
@@ -450,47 +451,111 @@ export class Web3Scene extends Phaser.Scene {
     // All marked for blockchain developer handoff
     // ═══════════════════════════════════════════════════════════
 
-    // TODO: WEB3 INTEGRATION HERE
-    // Connect to MetaMask / WalletConnect / Coinbase Wallet.
-    // On success: set playerProfile.walletConnected = true,
-    //             set playerProfile.walletAddress = accounts[0],
-    //             then call fetchNFTs() to hydrate owned Hashmon.
-    // Example:
-    //   const provider = new ethers.BrowserProvider(window.ethereum);
-    //   const accounts = await provider.send("eth_requestAccounts", []);
-    //   playerProfile.walletAddress = accounts[0];
     async connectWallet() {
-        console.log('[Web3] Requesting wallet connection...');
-        // Mock: simulate successful connection
-        playerProfile.walletConnected = true;
-        playerProfile.walletAddress = '0x7a3b...f91d';
-        this.updateWalletStatus();
-        this.showTab(this.currentTab); // Refresh current tab
+        if (typeof window.ethereum === 'undefined') {
+            alert('请先安装MetaMask钱包');
+            return;
+        }
+        try {
+            const provider = new window.ethers.BrowserProvider(window.ethereum);
+            const accounts = await provider.send("eth_requestAccounts", []);
+            const signer = await provider.getSigner();
+            playerProfile.walletConnected = true;
+            playerProfile.walletAddress = await signer.getAddress();
+            this.updateWalletStatus();
+            await this.fetchNFTs();
+            this.showTab(this.currentTab);
+        } catch (e) {
+            alert('钱包连接失败: ' + e.message);
+        }
     }
 
-    // TODO: WEB3 INTEGRATION HERE
-    // Query the Hashmon NFT smart contract for all tokens owned by
-    // the connected wallet. For each token:
-    //   - Read tokenURI → fetch metadata JSON from IPFS
-    //   - Parse species, nickname, level, stats from metadata
-    //   - Push into playerProfile.ownedHashmon[]
     async fetchNFTs() {
-        console.log('[Web3] Fetching owned Hashmon NFTs from contract...');
-        // Mock data already populated in PlayerProfile constructor
+        if (!playerProfile.walletConnected) return;
+        const provider = new window.ethers.BrowserProvider(window.ethereum);
+        const contract = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, provider);
+        const address = playerProfile.walletAddress;
+        let balance = 0;
+        try {
+            balance = Number(await contract.balanceOf(address));
+        } catch (e) {
+            alert('合约调用失败: ' + e.message);
+            return;
+        }
+        playerProfile.ownedHashmon = [];
+        for (let i = 0; i < balance; i++) {
+            const tokenId = await contract.tokenOfOwnerByIndex(address, i);
+            let tokenURI = await contract.tokenURI(tokenId);
+            // 兼容ipfs://
+            if (tokenURI.startsWith('ipfs://')) {
+                tokenURI = IPFS_GATEWAY + tokenURI.replace('ipfs://', '');
+            }
+            const metadata = await fetch(tokenURI).then(r => r.json());
+            playerProfile.ownedHashmon.push({
+                tokenId: tokenId.toString(),
+                speciesKey: metadata.attributes.species,
+                nickname: metadata.name,
+                level: metadata.attributes.level,
+                mintedBy: metadata.attributes.mintedBy,
+                isOriginalMinter: metadata.attributes.mintedBy?.toLowerCase() === address.toLowerCase(),
+            });
+        }
     }
 
-    // TODO: WEB3 INTEGRATION HERE
-    // Call the Hashmon contract's mint() function:
-    //   - Pass species, nickname, stats as parameters
-    //   - Upload metadata JSON + image to IPFS via Pinata/Infura
-    //   - Send mint transaction (user pays gas + mint price)
-    //   - On receipt: add new NFT to playerProfile.ownedHashmon[]
+    // 需要配置Pinata/Infura API，前端仅做演示，实际生产建议后端代理
     async mintHashmon() {
-        console.log('[Web3] Initiating Hashmon mint transaction...');
-        console.log('[Web3] Steps: 1. Upload metadata to IPFS');
-        console.log('[Web3]        2. Call contract.mint(tokenURI)');
-        console.log('[Web3]        3. Wait for transaction receipt');
-        console.log('[Web3]        4. Update local inventory');
+        if (!playerProfile.walletConnected) {
+            alert('请先连接钱包');
+            return;
+        }
+        // TODO: 替换为实际表单输入
+        const nickname = 'My Hashmon';
+        const speciesKey = 'WaterRat';
+        const species = SPECIES[speciesKey];
+        const walletAddress = playerProfile.walletAddress;
+        // 构造元数据
+        const metadata = {
+            name: nickname,
+            description: `A ${species.name} Hashmon minted on the Hashmon protocol.`,
+            image: 'ipfs://Qm.../waterrat.png', // TODO: 上传图片到IPFS后替换
+            external_url: '',
+            attributes: {
+                species: speciesKey,
+                type: species.type,
+                level: 10,
+                stats: { ...species.baseStats },
+                normalizedStats: { ...species.baseNormalizedStats },
+                moves: [...species.moveKeys],
+                mintedBy: walletAddress,
+                mintDate: new Date().toISOString().slice(0, 10),
+                originalSpeciesTemplate: true
+            }
+        };
+        // 上传到IPFS（需后端或Pinata SDK，前端演示用）
+        let tokenURI = '';
+        try {
+            // 示例：fetch Pinata API
+            // const res = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', { ... })
+            // tokenURI = 'ipfs://' + res.IpfsHash;
+            alert('请实现IPFS上传逻辑，将metadata上传到IPFS并获得tokenURI');
+            tokenURI = 'ipfs://Qm...'; // TODO: 替换为实际IPFS哈希
+        } catch (e) {
+            alert('IPFS上传失败: ' + e.message);
+            return;
+        }
+        try {
+            const provider = new window.ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contract = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, signer);
+            const mintPrice = await contract.mintPrice();
+            const tx = await contract.mint(walletAddress, tokenURI, { value: mintPrice });
+            await tx.wait();
+            alert('铸造成功！');
+            await this.fetchNFTs();
+            this.showTab('myNfts');
+        } catch (e) {
+            alert('合约铸造失败: ' + e.message);
+        }
     }
 
     // TODO: WEB3 INTEGRATION HERE
@@ -502,25 +567,48 @@ export class Web3Scene extends Phaser.Scene {
         console.log(`[Web3] Evolving tokens ${tokenId1} + ${tokenId2}...`);
     }
 
-    // TODO: WEB3 INTEGRATION HERE
-    // Purchase a listed NFT from the marketplace:
-    //   - Call marketplace contract's buy(tokenId) with msg.value = listing price
-    //   - Transfer NFT from seller to buyer
-    //   - Update playerProfile.ownedHashmon[]
-    //   - Remove listing from marketplace
     async buyHashmon(listing) {
-        console.log(`[Web3] Purchasing ${listing.nickname} (${listing.tokenId}) for ${listing.price}...`);
-        console.log('[Web3] Steps: 1. Approve spend');
-        console.log('[Web3]        2. Call marketplace.buyItem(tokenId)');
-        console.log('[Web3]        3. Wait for transfer confirmation');
+        if (!playerProfile.walletConnected) {
+            alert('请先连接钱包');
+            return;
+        }
+        try {
+            const provider = new window.ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const market = new window.ethers.Contract(CONTRACTS.Marketplace.address, CONTRACTS.Marketplace.abi, signer);
+            const priceWei = window.ethers.parseEther(listing.price.replace(' ETH', ''));
+            const tx = await market.buyItem(listing.tokenId, { value: priceWei });
+            await tx.wait();
+            alert('购买成功！');
+            await this.fetchNFTs();
+            this.showTab('myNfts');
+        } catch (e) {
+            alert('购买失败: ' + e.message);
+        }
     }
 
-    // TODO: WEB3 INTEGRATION HERE
-    // List one of the player's owned Hashmon on the marketplace:
-    //   - Call marketplace contract's listItem(tokenId, price)
-    //   - NFT gets held in escrow by the marketplace contract
     async listHashmonForSale(tokenId, priceInEth) {
-        console.log(`[Web3] Listing ${tokenId} for sale at ${priceInEth} ETH...`);
+        if (!playerProfile.walletConnected) {
+            alert('请先连接钱包');
+            return;
+        }
+        try {
+            const provider = new window.ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const nft = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, signer);
+            const market = new window.ethers.Contract(CONTRACTS.Marketplace.address, CONTRACTS.Marketplace.abi, signer);
+            // 先授权marketplace合约转移NFT
+            const approveTx = await nft.approve(CONTRACTS.Marketplace.address, tokenId);
+            await approveTx.wait();
+            const priceWei = window.ethers.parseEther(priceInEth);
+            const tx = await market.listItem(tokenId, priceWei);
+            await tx.wait();
+            alert('上架成功！');
+            await this.fetchNFTs();
+            this.showTab('market');
+        } catch (e) {
+            alert('上架失败: ' + e.message);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
