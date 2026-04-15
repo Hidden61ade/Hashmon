@@ -1,0 +1,33 @@
+{
+  "name": "hashmon",
+  "version": "1.0.0",
+  "description": "> **Document Purpose**: This README is written as a comprehensive agent-to-agent handoff. If you are an AI agent picking up this project, read this document in its entirety before making any changes. It describes the complete frontend architecture, data contracts, integration points, and the precise scope of remaining backend/Web3 work.",
+  "main": "phaser.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hidden61ade/Hashmon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Hidden61ade/Hashmon/issues"
+  },
+  "homepage": "https://github.com/Hidden61ade/Hashmon#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^17.4.2",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.26.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  }
+}

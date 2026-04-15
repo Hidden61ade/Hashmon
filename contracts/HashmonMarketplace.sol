@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+
 interface IHashmonNFT {
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
 }
 
-contract HashmonMarketplace {
+contract HashmonMarketplace is ERC721Holder {
     struct Listing {
         address seller;
         uint256 price;
@@ -26,6 +28,7 @@ contract HashmonMarketplace {
     }
 
     function listItem(uint256 tokenId, uint256 price) external {
+        require(price > 0, "Price must be greater than 0");
         IHashmonNFT(nftContract).safeTransferFrom(msg.sender, address(this), tokenId);
         listings[tokenId] = Listing({seller: msg.sender, price: price, active: true});
         emit ItemListed(tokenId, msg.sender, price);
@@ -36,7 +39,10 @@ contract HashmonMarketplace {
         require(listing.active, "Not listed");
         require(msg.value >= listing.price, "Insufficient payment");
         listing.active = false;
-        payable(listing.seller).transfer(listing.price);
+
+        (bool success, ) = payable(listing.seller).call{value: listing.price}("");
+        require(success, "Payment transfer failed");
+
         IHashmonNFT(nftContract).safeTransferFrom(address(this), msg.sender, tokenId);
         emit ItemSold(tokenId, msg.sender, listing.price);
     }

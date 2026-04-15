@@ -1,9 +1,9 @@
-import { PreloaderScene } from './scenes/PreloaderScene.js';
-import { StartScene } from './scenes/StartScene.js';
-import { Web3Scene } from './scenes/Web3Scene.js';
-import { BattleScene } from './scenes/BattleScene.js';
-import { InventoryScene } from './scenes/InventoryScene.js';
-import { GardenScene } from './scenes/GardenScene.js';
+import { PreloaderScene } from './scenes/PreloaderScene.js?v=20260416a';
+import { StartScene } from './scenes/StartScene.js?v=20260416a';
+import { Web3Scene } from './scenes/Web3Scene.js?v=20260416a';
+import { BattleScene } from './scenes/BattleScene.js?v=20260416a';
+import { InventoryScene } from './scenes/InventoryScene.js?v=20260416a';
+import { GardenScene } from './scenes/GardenScene.js?v=20260416a';
 
 const config = {
     type: Phaser.AUTO,

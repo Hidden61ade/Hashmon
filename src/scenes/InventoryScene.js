@@ -6,7 +6,8 @@
  * ──────────────────────────────────────────────────────────────
  */
 import { Hashmon } from '../data/Hashmon.js';
-import { SPECIES } from '../data/HashmonData.js';
+import { SPECIES, MOVES } from '../data/HashmonData.js';
+import { playerProfile } from '../data/PlayerProfile.js';
 
 export class InventoryScene extends Phaser.Scene {
     constructor() {
@@ -26,11 +27,7 @@ export class InventoryScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // ── Build the player's roster ──
-        // For now just 2 Hashmon. Easily expandable.
-        this.roster = [
-            new Hashmon('WaterRat', 10),
-            new Hashmon('FireDragon', 8),
-        ];
+        this.roster = this.buildRosterFromProfile();
 
         this.selectedIndex = 0;
 
@@ -39,7 +36,9 @@ export class InventoryScene extends Phaser.Scene {
 
         // ── Right Panel: Detail Card ──
         this.detailGroup = this.add.group();
-        this.drawDetailCard(this.roster[0]);
+        if (this.roster.length > 0) {
+            this.drawDetailCard(this.roster[0]);
+        }
 
         // ── Back Button ──
         this.createButton(
@@ -61,6 +60,13 @@ export class InventoryScene extends Phaser.Scene {
 
         this.rosterSlots = [];
 
+        if (this.roster.length === 0) {
+            this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, 'No Hashmon in your wallet yet.', {
+                fontFamily: 'Futile', fontSize: '26px', color: '#cccccc'
+            }).setOrigin(0.5);
+            return;
+        }
+
         this.roster.forEach((mon, i) => {
             const y = startY + i * (slotH + 12);
 
@@ -72,7 +78,7 @@ export class InventoryScene extends Phaser.Scene {
             slotBg.strokeRoundedRect(startX, y, 340, slotH, 10);
 
             // Sprite thumbnail
-            this.add.image(startX + 50, y + slotH / 2, mon.textureKey).setScale(1.8);
+            this.add.image(startX + 50, y + slotH / 2, mon.customTextureKey || mon.textureKey).setScale(1.8);
 
             // Name + Level
             this.add.text(startX + 100, y + 12, mon.name, {
@@ -144,7 +150,7 @@ export class InventoryScene extends Phaser.Scene {
         this.detailGroup.add(cardBg);
 
         // ── Sprite (large) ──
-        const spriteImg = this.add.image(panelX + 120, panelY + 120, mon.textureKey).setScale(4);
+        const spriteImg = this.add.image(panelX + 120, panelY + 120, mon.customTextureKey || mon.textureKey).setScale(4);
         this.detailGroup.add(spriteImg);
 
         // ── Name / Type / Level ──
@@ -261,6 +267,42 @@ export class InventoryScene extends Phaser.Scene {
                 fontFamily: 'Futile', fontSize: '13px', color: '#88aacc',
             });
             this.detailGroup.add(mStats);
+        });
+    }
+
+    buildRosterFromProfile() {
+        if (!playerProfile.ownedHashmon || playerProfile.ownedHashmon.length === 0) {
+            return [];
+        }
+
+        return playerProfile.ownedHashmon.map((nft) => {
+            const mon = new Hashmon(nft.speciesKey, nft.level || 10);
+            mon.name = nft.nickname || mon.name;
+            mon.type = nft.type || mon.type;
+            mon.customTextureKey = nft.customTextureKey || null;
+
+            if (nft.stats) {
+                mon.baseStats = { ...mon.baseStats, ...nft.stats };
+                mon.maxHp = mon.calcMaxHp();
+                mon.currentHp = mon.maxHp;
+            }
+
+            if (Array.isArray(nft.moves) && nft.moves.length) {
+                mon.moves = nft.moves.map((key) => {
+                    const move = MOVES[key];
+                    return move ? { ...move, currentPP: move.pp } : {
+                        name: key,
+                        type: 'Normal',
+                        category: 'Status',
+                        power: 0,
+                        accuracy: 100,
+                        pp: 10,
+                        currentPP: 10,
+                    };
+                });
+            }
+
+            return mon;
         });
     }
 

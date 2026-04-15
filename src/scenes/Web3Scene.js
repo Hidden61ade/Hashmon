@@ -11,8 +11,8 @@
  * ──────────────────────────────────────────────────────────────
  */
 import { playerProfile, RANKS } from '../data/PlayerProfile.js';
-import { SPECIES } from '../data/HashmonData.js';
-import { CONTRACTS, IPFS_GATEWAY } from '../data/ContractConfig.js';
+import { SPECIES, MOVES } from '../data/HashmonData.js';
+import { CONTRACTS, IPFS_GATEWAY, uploadToIPFS, uploadFileToIPFS } from '../data/ContractConfig.js';
 
 export class Web3Scene extends Phaser.Scene {
     constructor() {
@@ -22,6 +22,8 @@ export class Web3Scene extends Phaser.Scene {
     create() {
         const W = this.sys.game.config.width;
         const H = this.sys.game.config.height;
+
+        this.createDraft = this.buildCreateDraft('WaterRat');
 
         // Background
         const bg = this.add.image(0, 0, 'space_bg').setOrigin(0);
@@ -229,11 +231,11 @@ export class Web3Scene extends Phaser.Scene {
 
     drawMyNftsTab() {
         const pp = playerProfile;
-        const startX = 80;
+        const startX = 55;
         const startY = 120;
-        const cardW = 360;
-        const cardH = 220;
-        const gap = 40;
+        const cardW = 370;
+        const cardH = 250;
+        const gap = 25;
 
         if (pp.ownedHashmon.length === 0) {
             this.contentGroup.add(this.addText(this.cameras.main.centerX, 350,
@@ -258,7 +260,7 @@ export class Web3Scene extends Phaser.Scene {
             this.contentGroup.add(cardBg);
 
             // Sprite
-            this.contentGroup.add(this.add.image(cx + 55, cy + 80, species.textureKey).setScale(2.5));
+            this.contentGroup.add(this.add.image(cx + 55, cy + 80, nft.customTextureKey || species.textureKey).setScale(2.5));
 
             // Token ID
             this.contentGroup.add(this.addText(cx + 120, cy + 14, nft.tokenId, '14px', '#666688'));
@@ -271,7 +273,8 @@ export class Web3Scene extends Phaser.Scene {
 
             // Type
             const typeColors = { Water: '#3399ff', Fire: '#ff6633', Grass: '#33cc66', Normal: '#cccccc', Dark: '#9966cc' };
-            this.contentGroup.add(this.addText(cx + 120, cy + 90, `Type: ${species.type}`, '14px', typeColors[species.type] || '#fff'));
+            const nftType = nft.type || species.type;
+            this.contentGroup.add(this.addText(cx + 120, cy + 90, `Type: ${nftType}`, '14px', typeColors[nftType] || '#fff'));
 
             // Minted by
             this.contentGroup.add(this.addText(cx + 120, cy + 115, `Minted by: ${nft.mintedBy}`, '12px', '#555577'));
@@ -284,11 +287,17 @@ export class Web3Scene extends Phaser.Scene {
             }
 
             // Base stats summary
-            const bst = Object.values(species.baseStats).reduce((a, b) => a + b, 0);
-            this.contentGroup.add(this.addText(cx + 15, cy + cardH - 30, `BST: ${bst}`, '14px', '#888899'));
+            const bstSource = nft.stats || species.baseStats;
+            const bst = Object.values(bstSource).reduce((a, b) => a + b, 0);
+            this.contentGroup.add(this.addText(cx + 15, cy + 160, `BST: ${bst}`, '14px', '#888899'));
+            this.contentGroup.add(this.addText(cx + 90, cy + 160, `ATK ${bstSource.atk} / SPD ${bstSource.speed}`, '12px', '#99bbcc'));
+
+            const moveNames = (nft.moves || species.moveKeys).map(key => MOVES[key]?.name || key);
+            this.contentGroup.add(this.addText(cx + 15, cy + 182, `Moves: ${moveNames[0] || '-'}, ${moveNames[1] || '-'}`, '12px', '#ccddff'));
+            this.contentGroup.add(this.addText(cx + 15, cy + 200, `       ${moveNames[2] || '-'}, ${moveNames[3] || '-'}`, '12px', '#ccddff'));
 
             // View in Inventory button
-            this.createContentButton(cx + cardW - 80, cy + cardH - 30, 'View Stats', () => {
+            this.createContentButton(cx + cardW - 80, cy + cardH - 25, 'View Stats', () => {
                 this.scene.start('InventoryScene');
             });
         });
@@ -300,84 +309,111 @@ export class Web3Scene extends Phaser.Scene {
 
     drawCreateTab() {
         const cx = this.cameras.main.centerX;
-        const cardX = cx - 350;
-        const cardY = 120;
+        const cardX = cx - 420;
+        const cardY = 110;
+        const draft = this.createDraft;
+        const species = SPECIES[draft.speciesKey];
+        const previewStats = draft.randomizedStats || species.baseStats;
+        const previewTexture = draft.previewTextureKey || species.textureKey;
+        const movesLabel = (draft.selectedMoves || []).map(key => MOVES[key]?.name || key).join(', ');
 
-        // Main panel
         const cardBg = this.add.graphics();
-        cardBg.fillStyle(0x0e0e2a, 0.9);
-        cardBg.fillRoundedRect(cardX, cardY, 700, 480, 14);
+        cardBg.fillStyle(0x0e0e2a, 0.92);
+        cardBg.fillRoundedRect(cardX, cardY, 840, 500, 14);
         cardBg.lineStyle(2, 0x3344aa, 0.5);
-        cardBg.strokeRoundedRect(cardX, cardY, 700, 480, 14);
+        cardBg.strokeRoundedRect(cardX, cardY, 840, 500, 14);
         this.contentGroup.add(cardBg);
 
         this.contentGroup.add(this.addText(cx, cardY + 25, 'Create Your Own Hashmon', '28px', '#ffcc00').setOrigin(0.5));
-        this.contentGroup.add(this.addText(cx, cardY + 60, 'Design a unique creature and mint it as an NFT on-chain', '14px', '#888899').setOrigin(0.5));
+        this.contentGroup.add(this.addText(cx, cardY + 58, 'Upload art, edit 4 moves, roll chain stats, then confirm mint', '14px', '#888899').setOrigin(0.5));
 
-        // ── Form Fields (mock) ──
-        const fieldX = cardX + 40;
-        let fieldY = cardY + 100;
-        const fieldGap = 55;
+        const fieldX = cardX + 30;
+        let fieldY = cardY + 95;
+        const fieldGap = 44;
 
-        const fields = [
-            { label: 'Nickname', placeholder: 'Enter a name...', value: 'My Hashmon' },
-            { label: 'Base Species', placeholder: 'WaterRat or FireDragon', value: 'WaterRat' },
-            { label: 'Custom Type', placeholder: 'Water, Fire, Grass...', value: 'Water' },
-        ];
-
-        fields.forEach(f => {
-            this.contentGroup.add(this.addText(fieldX, fieldY, f.label, '16px', '#aabbcc'));
-            // Field background
+        const renderField = (label, value, buttonText, onEdit) => {
+            this.contentGroup.add(this.addText(fieldX, fieldY, label, '15px', '#aabbcc'));
             const fb = this.add.graphics();
             fb.fillStyle(0x1a1a3a, 1);
-            fb.fillRoundedRect(fieldX + 150, fieldY - 4, 300, 28, 5);
+            fb.fillRoundedRect(fieldX + 140, fieldY - 4, 260, 28, 5);
             fb.lineStyle(1, 0x444488, 0.5);
-            fb.strokeRoundedRect(fieldX + 150, fieldY - 4, 300, 28, 5);
+            fb.strokeRoundedRect(fieldX + 140, fieldY - 4, 260, 28, 5);
             this.contentGroup.add(fb);
-            this.contentGroup.add(this.addText(fieldX + 160, fieldY + 2, f.value, '15px', '#667788'));
+            this.contentGroup.add(this.addText(fieldX + 150, fieldY + 2, String(value).slice(0, 34), '14px', '#dde7ff'));
+            this.createContentButton(fieldX + 470, fieldY + 8, buttonText, onEdit);
             fieldY += fieldGap;
+        };
+
+        renderField('Nickname', draft.nickname, 'Edit', () => {
+            const val = window.prompt('Enter nickname', draft.nickname);
+            if (val && val.trim()) {
+                this.createDraft.nickname = val.trim().slice(0, 20);
+                this.showTab('create');
+            }
         });
 
-        // Stat allocation preview
-        fieldY += 10;
-        this.contentGroup.add(this.addText(fieldX, fieldY, 'Stat Allocation Preview', '18px', '#cccccc'));
-        fieldY += 30;
+        renderField('Base Species', draft.speciesKey, 'Swap', () => {
+            const next = draft.speciesKey === 'WaterRat' ? 'FireDragon' : 'WaterRat';
+            this.createDraft = this.buildCreateDraft(next, this.createDraft.nickname);
+            this.showTab('create');
+        });
 
-        const previewStats = [
-            { label: 'HP',     val: 55, color: 0x44cc44 },
-            { label: 'ATK',    val: 48, color: 0xff5544 },
-            { label: 'DEF',    val: 45, color: 0xffaa33 },
-            { label: 'SP.ATK', val: 62, color: 0x5599ff },
-            { label: 'SP.DEF', val: 50, color: 0x44ddaa },
-            { label: 'SPD',    val: 58, color: 0xdddd44 },
+        renderField('Custom Type', draft.customType, 'Edit', () => {
+            const val = window.prompt('Enter type', draft.customType);
+            if (val && val.trim()) {
+                this.createDraft.customType = val.trim().slice(0, 16);
+                this.showTab('create');
+            }
+        });
+
+        renderField('Artwork', draft.imageName || 'Default sprite', 'Upload', () => this.pickMintImage());
+        renderField('Moves', movesLabel || 'None', 'Edit', () => this.editMoveSet());
+
+        fieldY += 6;
+        this.contentGroup.add(this.addText(fieldX, fieldY, `Chain Seed: ${draft.seed || 'not rolled yet'}`, '13px', '#77ccee'));
+        fieldY += 24;
+        this.contentGroup.add(this.addText(fieldX, fieldY, 'Chain-Randomized Stats', '18px', '#cccccc'));
+        fieldY += 26;
+
+        const statRows = [
+            { label: 'HP', val: previewStats.hp, color: 0x44cc44 },
+            { label: 'ATK', val: previewStats.atk, color: 0xff5544 },
+            { label: 'DEF', val: previewStats.def, color: 0xffaa33 },
+            { label: 'SP.ATK', val: previewStats.spAtk, color: 0x5599ff },
+            { label: 'SP.DEF', val: previewStats.spDef, color: 0x44ddaa },
+            { label: 'SPD', val: previewStats.speed, color: 0xdddd44 },
         ];
 
-        previewStats.forEach((s, i) => {
-            const sy = fieldY + i * 26;
-            this.contentGroup.add(this.addText(fieldX, sy, s.label, '14px', '#999999'));
+        statRows.forEach((s, i) => {
+            const sy = fieldY + i * 24;
+            this.contentGroup.add(this.addText(fieldX, sy, s.label, '13px', '#999999'));
             const barBg = this.add.graphics();
             barBg.fillStyle(0x222244, 1);
-            barBg.fillRoundedRect(fieldX + 80, sy + 2, 200, 12, 3);
+            barBg.fillRoundedRect(fieldX + 70, sy + 2, 180, 10, 3);
             this.contentGroup.add(barBg);
             const barFg = this.add.graphics();
             barFg.fillStyle(s.color, 1);
-            barFg.fillRoundedRect(fieldX + 80, sy + 2, 200 * (s.val / 120), 12, 3);
+            barFg.fillRoundedRect(fieldX + 70, sy + 2, 180 * (s.val / 120), 10, 3);
             this.contentGroup.add(barFg);
-            this.contentGroup.add(this.addText(fieldX + 290, sy, `${s.val}`, '14px', '#cccccc'));
+            this.contentGroup.add(this.addText(fieldX + 260, sy - 1, `${s.val}`, '13px', '#cccccc'));
         });
 
-        // Estimated mint cost
-        this.contentGroup.add(this.addText(fieldX + 380, fieldY, 'Mint Cost', '16px', '#888899'));
-        this.contentGroup.add(this.addText(fieldX + 380, fieldY + 30, '0.02 ETH', '28px', '#ffcc44'));
-        this.contentGroup.add(this.addText(fieldX + 380, fieldY + 65, '+ Gas Fees', '13px', '#666688'));
+        const rightX = cardX + 610;
+        this.contentGroup.add(this.addText(rightX, cardY + 95, 'Preview', '18px', '#ffdd88').setOrigin(0.5));
+        this.contentGroup.add(this.add.image(rightX, cardY + 190, previewTexture).setScale(4));
+        this.contentGroup.add(this.addText(rightX, cardY + 255, draft.nickname, '20px', '#ffffff').setOrigin(0.5));
+        this.contentGroup.add(this.addText(rightX, cardY + 282, `${draft.speciesKey} / ${draft.customType}`, '13px', '#88ccff').setOrigin(0.5));
+        this.contentGroup.add(this.addText(rightX, cardY + 312, `Moves: ${(draft.selectedMoves || []).length}/4`, '13px', '#cccccc').setOrigin(0.5));
+        this.contentGroup.add(this.addText(rightX, cardY + 338, draft.imageFile ? 'Custom art ready for IPFS' : 'Using default art unless uploaded', '11px', '#88bb88').setOrigin(0.5));
+        this.contentGroup.add(this.addText(rightX, cardY + 380, 'Mint Cost', '16px', '#888899').setOrigin(0.5));
+        this.contentGroup.add(this.addText(rightX, cardY + 408, '0.02 ETH', '28px', '#ffcc44').setOrigin(0.5));
 
-        // Mint button
-        this.createContentButton(fieldX + 440, fieldY + 120, '  Mint NFT  ', () => this.mintHashmon());
-
-        // TODO notice
-        this.contentGroup.add(this.addText(fieldX + 360, fieldY + 155,
-            '// TODO: Form inputs will be\nimplemented with DOM overlay\nor Phaser input fields',
-            '11px', '#444466'));
+        this.createContentButton(rightX, cardY + 445, 'Roll Chain Stats', () => this.rollChainStats());
+        this.createContentButton(rightX, cardY + 480, 'Confirm & Mint', () => this.mintHashmon());
+        this.createContentButton(rightX - 120, cardY + 480, 'Reset', () => {
+            this.createDraft = this.buildCreateDraft('WaterRat');
+            this.showTab('create');
+        });
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -472,89 +508,141 @@ export class Web3Scene extends Phaser.Scene {
 
     async fetchNFTs() {
         if (!playerProfile.walletConnected) return;
+        const address = playerProfile.walletAddress;
+
+        if (!CONTRACTS.HashmonNFT.address || CONTRACTS.HashmonNFT.address.includes('Your') || !CONTRACTS.HashmonNFT.abi.length) {
+            console.warn('[Web3] NFT contract not configured yet; using local demo inventory.');
+            return;
+        }
+
         const provider = new window.ethers.BrowserProvider(window.ethereum);
         const contract = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, provider);
-        const address = playerProfile.walletAddress;
         let balance = 0;
         try {
             balance = Number(await contract.balanceOf(address));
         } catch (e) {
-            alert('合约调用失败: ' + e.message);
+            alert('NFT读取失败，请检查合约地址、ABI和网络: ' + e.message);
             return;
         }
         playerProfile.ownedHashmon = [];
         for (let i = 0; i < balance; i++) {
             const tokenId = await contract.tokenOfOwnerByIndex(address, i);
             let tokenURI = await contract.tokenURI(tokenId);
-            // 兼容ipfs://
             if (tokenURI.startsWith('ipfs://')) {
                 tokenURI = IPFS_GATEWAY + tokenURI.replace('ipfs://', '');
             }
             const metadata = await fetch(tokenURI).then(r => r.json());
+            let customTextureKey = null;
+            const imageUrl = this.toGatewayUrl(metadata.image);
+            if (imageUrl) {
+                customTextureKey = await this.loadTextureFromUrl(`nft_art_${tokenId.toString()}`, imageUrl);
+            }
             playerProfile.ownedHashmon.push({
-                tokenId: tokenId.toString(),
+                tokenId: `#${tokenId.toString().padStart(4, '0')}`,
                 speciesKey: metadata.attributes.species,
                 nickname: metadata.name,
                 level: metadata.attributes.level,
                 mintedBy: metadata.attributes.mintedBy,
                 isOriginalMinter: metadata.attributes.mintedBy?.toLowerCase() === address.toLowerCase(),
+                type: metadata.attributes.type,
+                moves: metadata.attributes.moves,
+                stats: metadata.attributes.stats,
+                image: metadata.image,
+                customTextureKey,
             });
         }
     }
 
-    // 需要配置Pinata/Infura API，前端仅做演示，实际生产建议后端代理
     async mintHashmon() {
         if (!playerProfile.walletConnected) {
             alert('请先连接钱包');
             return;
         }
-        // TODO: 替换为实际表单输入
-        const nickname = 'My Hashmon';
-        const speciesKey = 'WaterRat';
+
+        const { nickname, speciesKey, customType, level, selectedMoves, randomizedStats, normalizedStats, imageFile, previewTextureKey, seed } = this.createDraft;
         const species = SPECIES[speciesKey];
         const walletAddress = playerProfile.walletAddress;
-        // 构造元数据
+
+        if (!selectedMoves || selectedMoves.length !== 4) {
+            alert('请先自定义并确认 4 个技能');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `确认铸造这个 Hashmon 吗？\n\n名称: ${nickname}\n物种: ${speciesKey}\n属性: ${customType}\n技能: ${selectedMoves.join(', ')}\n种子: ${seed || '未生成'}\n贴图: ${imageFile ? imageFile.name : '默认贴图'}`
+        );
+        if (!confirmed) return;
+
+        let imageURI = '';
+        if (imageFile) {
+            try {
+                imageURI = await uploadFileToIPFS(imageFile);
+            } catch (e) {
+                alert('图片上传失败: ' + e.message);
+                return;
+            }
+        }
+
         const metadata = {
             name: nickname,
-            description: `A ${species.name} Hashmon minted on the Hashmon protocol.`,
-            image: 'ipfs://Qm.../waterrat.png', // TODO: 上传图片到IPFS后替换
+            description: `A custom ${species.name} Hashmon minted on the Hashmon protocol.`,
+            image: imageURI,
             external_url: '',
             attributes: {
                 species: speciesKey,
-                type: species.type,
-                level: 10,
-                stats: { ...species.baseStats },
-                normalizedStats: { ...species.baseNormalizedStats },
-                moves: [...species.moveKeys],
+                type: customType || species.type,
+                level,
+                stats: { ...randomizedStats },
+                normalizedStats: { ...normalizedStats },
+                moves: [...selectedMoves],
                 mintedBy: walletAddress,
                 mintDate: new Date().toISOString().slice(0, 10),
-                originalSpeciesTemplate: true
+                originalSpeciesTemplate: false,
+                chainSeed: seed,
             }
         };
-        // 上传到IPFS（需后端或Pinata SDK，前端演示用）
+
         let tokenURI = '';
         try {
-            // 示例：fetch Pinata API
-            // const res = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', { ... })
-            // tokenURI = 'ipfs://' + res.IpfsHash;
-            alert('请实现IPFS上传逻辑，将metadata上传到IPFS并获得tokenURI');
-            tokenURI = 'ipfs://Qm...'; // TODO: 替换为实际IPFS哈希
+            tokenURI = await uploadToIPFS(metadata);
         } catch (e) {
-            alert('IPFS上传失败: ' + e.message);
+            alert('元数据上传失败: ' + e.message);
             return;
         }
+
+        const contractReady = CONTRACTS.HashmonNFT.address && !CONTRACTS.HashmonNFT.address.includes('Your') && CONTRACTS.HashmonNFT.abi.length;
+
+        if (!contractReady) {
+            playerProfile.ownedHashmon.push({
+                tokenId: `#${String(playerProfile.ownedHashmon.length + 1001).padStart(4, '0')}`,
+                speciesKey,
+                nickname,
+                level,
+                mintedBy: walletAddress,
+                isOriginalMinter: true,
+                type: customType,
+                moves: [...selectedMoves],
+                stats: { ...randomizedStats },
+                image: imageURI,
+                customTextureKey: previewTextureKey,
+            });
+            alert(`演示模式铸造成功，图片和元数据已上传到 IPFS。\nMetadata: ${tokenURI}`);
+            this.showTab('myNfts');
+            return;
+        }
+
         try {
             const provider = new window.ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const contract = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, signer);
-            const mintPrice = await contract.mintPrice();
+            const mintPrice = typeof contract.mintPrice === 'function' ? await contract.mintPrice() : window.ethers.parseEther('0.02');
             const tx = await contract.mint(walletAddress, tokenURI, { value: mintPrice });
             await tx.wait();
-            alert('铸造成功！');
+            alert('铸造成功并已上链！');
             await this.fetchNFTs();
             this.showTab('myNfts');
         } catch (e) {
-            alert('合约铸造失败: ' + e.message);
+            alert('合约铸造失败，请检查是否已部署合约且当前网络正确: ' + e.message);
         }
     }
 
@@ -572,12 +660,30 @@ export class Web3Scene extends Phaser.Scene {
             alert('请先连接钱包');
             return;
         }
+
+        const contractReady = CONTRACTS.Marketplace.address && !CONTRACTS.Marketplace.address.includes('Your') && CONTRACTS.Marketplace.abi.length;
+        if (!contractReady) {
+            playerProfile.marketplaceListings = playerProfile.marketplaceListings.filter(item => item.tokenId !== listing.tokenId);
+            playerProfile.ownedHashmon.push({
+                tokenId: listing.tokenId,
+                speciesKey: listing.speciesKey,
+                nickname: listing.nickname,
+                level: listing.level,
+                mintedBy: listing.seller,
+                isOriginalMinter: false,
+            });
+            alert('演示模式购买成功！');
+            this.showTab('myNfts');
+            return;
+        }
+
         try {
             const provider = new window.ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const market = new window.ethers.Contract(CONTRACTS.Marketplace.address, CONTRACTS.Marketplace.abi, signer);
+            const tokenId = String(listing.tokenId).replace('#', '');
             const priceWei = window.ethers.parseEther(listing.price.replace(' ETH', ''));
-            const tx = await market.buyItem(listing.tokenId, { value: priceWei });
+            const tx = await market.buyItem(tokenId, { value: priceWei });
             await tx.wait();
             alert('购买成功！');
             await this.fetchNFTs();
@@ -592,16 +698,36 @@ export class Web3Scene extends Phaser.Scene {
             alert('请先连接钱包');
             return;
         }
+
+        const contractReady = CONTRACTS.HashmonNFT.address && !CONTRACTS.HashmonNFT.address.includes('Your') && CONTRACTS.Marketplace.address && !CONTRACTS.Marketplace.address.includes('Your');
+        if (!contractReady) {
+            const idx = playerProfile.ownedHashmon.findIndex(item => item.tokenId === tokenId || item.tokenId === `#${String(tokenId).padStart(4, '0')}`);
+            if (idx >= 0) {
+                const nft = playerProfile.ownedHashmon.splice(idx, 1)[0];
+                playerProfile.marketplaceListings.push({
+                    tokenId: nft.tokenId,
+                    speciesKey: nft.speciesKey,
+                    nickname: nft.nickname,
+                    level: nft.level,
+                    price: `${priceInEth} ETH`,
+                    seller: playerProfile.walletAddress,
+                });
+                alert('演示模式上架成功！');
+                this.showTab('market');
+                return;
+            }
+        }
+
         try {
             const provider = new window.ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const nft = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, signer);
             const market = new window.ethers.Contract(CONTRACTS.Marketplace.address, CONTRACTS.Marketplace.abi, signer);
-            // 先授权marketplace合约转移NFT
-            const approveTx = await nft.approve(CONTRACTS.Marketplace.address, tokenId);
+            const cleanTokenId = String(tokenId).replace('#', '');
+            const approveTx = await nft.approve(CONTRACTS.Marketplace.address, cleanTokenId);
             await approveTx.wait();
             const priceWei = window.ethers.parseEther(priceInEth);
-            const tx = await market.listItem(tokenId, priceWei);
+            const tx = await market.listItem(cleanTokenId, priceWei);
             await tx.wait();
             alert('上架成功！');
             await this.fetchNFTs();
@@ -609,6 +735,142 @@ export class Web3Scene extends Phaser.Scene {
         } catch (e) {
             alert('上架失败: ' + e.message);
         }
+    }
+
+    buildCreateDraft(speciesKey = 'WaterRat', nickname = 'My Hashmon') {
+        const species = SPECIES[speciesKey];
+        const draft = {
+            nickname,
+            speciesKey,
+            customType: species.type,
+            level: 10,
+            selectedMoves: [...species.moveKeys],
+            randomizedStats: { ...species.baseStats },
+            normalizedStats: { ...species.baseNormalizedStats },
+            imageFile: null,
+            imageName: 'Default sprite',
+            previewTextureKey: species.textureKey,
+            seed: 'pending',
+        };
+
+        const roll = this.generateChainStats(speciesKey, nickname);
+        draft.randomizedStats = roll.stats;
+        draft.normalizedStats = roll.normalizedStats;
+        draft.seed = roll.seed;
+        return draft;
+    }
+
+    generateChainStats(speciesKey, nickname) {
+        const species = SPECIES[speciesKey];
+        const chainId = window.ethereum?.chainId || '0x0';
+        const wallet = playerProfile.walletAddress || '0x0000000000000000000000000000000000000000';
+        const entropy = new Uint32Array(4);
+        window.crypto.getRandomValues(entropy);
+        const seedInput = `${chainId}:${wallet}:${speciesKey}:${nickname}:${Date.now()}:${Array.from(entropy).join('-')}`;
+        const hash = window.ethers?.keccak256
+            ? window.ethers.keccak256(window.ethers.toUtf8Bytes(seedInput))
+            : `0x${Math.random().toString(16).slice(2).padEnd(64, '0')}`;
+        const bytes = hash.replace('0x', '').padEnd(64, '0');
+        const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+        const rollAt = (base, pos, minAdj, maxAdj) => {
+            const raw = parseInt(bytes.slice(pos, pos + 2), 16);
+            const adj = minAdj + (raw % (maxAdj - minAdj + 1));
+            return clamp(base + adj, 25, 99);
+        };
+
+        const stats = {
+            hp: rollAt(species.baseStats.hp, 0, -4, 12),
+            atk: rollAt(species.baseStats.atk, 2, -6, 12),
+            def: rollAt(species.baseStats.def, 4, -6, 12),
+            spAtk: rollAt(species.baseStats.spAtk, 6, -6, 12),
+            spDef: rollAt(species.baseStats.spDef, 8, -6, 12),
+            speed: rollAt(species.baseStats.speed, 10, -6, 12),
+        };
+
+        const normalizedStats = {
+            strength: clamp(stats.atk / 100, 0, 1),
+            vitality: clamp(stats.hp / 100, 0, 1),
+            agility: clamp(stats.speed / 100, 0, 1),
+            dexterity: clamp(stats.def / 100, 0, 1),
+            intelligence: clamp(stats.spAtk / 100, 0, 1),
+        };
+
+        return {
+            stats,
+            normalizedStats,
+            seed: hash.slice(0, 18),
+        };
+    }
+
+    rollChainStats() {
+        const roll = this.generateChainStats(this.createDraft.speciesKey, this.createDraft.nickname);
+        this.createDraft.randomizedStats = roll.stats;
+        this.createDraft.normalizedStats = roll.normalizedStats;
+        this.createDraft.seed = roll.seed;
+        this.showTab('create');
+    }
+
+    editMoveSet() {
+        const available = Object.keys(MOVES);
+        const current = (this.createDraft.selectedMoves || []).join(', ');
+        const answer = window.prompt(
+            `请输入 4 个技能 key，用逗号分隔。\n可选:\n${available.join(', ')}`,
+            current
+        );
+        if (answer === null) return;
+
+        const chosen = answer.split(',').map(s => s.trim()).filter(Boolean);
+        if (chosen.length !== 4 || chosen.some(key => !MOVES[key])) {
+            alert('请选择恰好 4 个有效技能 key');
+            return;
+        }
+        this.createDraft.selectedMoves = chosen;
+        this.showTab('create');
+    }
+
+    async pickMintImage() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            this.createDraft.imageFile = file;
+            this.createDraft.imageName = file.name;
+
+            const objectUrl = URL.createObjectURL(file);
+            const texKey = `mint_art_${Date.now()}`;
+            const loaded = await this.loadTextureFromUrl(texKey, objectUrl);
+            URL.revokeObjectURL(objectUrl);
+            if (loaded) {
+                this.createDraft.previewTextureKey = loaded;
+            }
+            this.showTab('create');
+        };
+        input.click();
+    }
+
+    toGatewayUrl(uri) {
+        if (!uri) return '';
+        if (uri.startsWith('ipfs://')) return `${IPFS_GATEWAY}${uri.replace('ipfs://', '')}`;
+        return uri;
+    }
+
+    loadTextureFromUrl(key, url) {
+        return new Promise((resolve) => {
+            if (!url) {
+                resolve(null);
+                return;
+            }
+            if (this.textures.exists(key)) {
+                resolve(key);
+                return;
+            }
+            this.load.image(key, url);
+            this.load.once(Phaser.Loader.Events.COMPLETE, () => resolve(key));
+            this.load.once(Phaser.Loader.Events.LOAD_ERROR, () => resolve(null));
+            this.load.start();
+        });
     }
 
     // ═══════════════════════════════════════════════════════════
