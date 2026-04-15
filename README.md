@@ -189,6 +189,18 @@ Hashmon/
 
 ---
 
+## 最新进展
+
+今天已进一步补强以下能力：
+
+- 增加了 Companion Protocol 统一数据层，用于描述可跨场景复用的 NFT 角色
+- 增加了 Active Hashmon 机制，可指定同一只 NFT 在 Battle 和 Garden 中共同使用
+- 增加了 Cross-Game Interoperability Proof 展示面板，便于答辩时直接证明互操作性
+- 强化了 Garden → Battle 的状态联动，让互动结果能反馈到战斗展示中
+- 补强了 Mint / List / Buy 的演示闭环，使链上资产流转更完整
+
+---
+
 ## 相关文档
 
 - [WEB3_HANDOFF.md](WEB3_HANDOFF.md)

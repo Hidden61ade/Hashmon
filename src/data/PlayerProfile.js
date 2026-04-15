@@ -8,6 +8,8 @@
  * ──────────────────────────────────────────────────────────────
  */
 
+import { buildPortableCompanionProfile, defaultCompanionState, normalizeTokenId } from './CompanionProtocol.js';
+
 // ═══════════════════════════════════════════════════════════════
 // RANK TIERS (ladder-style ranking based on ELO / win count)
 // ═══════════════════════════════════════════════════════════════
@@ -48,6 +50,21 @@ export class PlayerProfile {
                 level: 10,
                 mintedBy: '0x7a3b...f91d',
                 isOriginalMinter: true,
+                normalizedStats: {
+                    strength: 0.48,
+                    vitality: 0.55,
+                    agility: 0.58,
+                    dexterity: 0.45,
+                    intelligence: 0.62,
+                },
+                companionState: {
+                    battles: 2,
+                    wins: 1,
+                    gardenInteractions: 3,
+                    happiness: 61,
+                    expFromGarden: 20,
+                    coinsFound: 2,
+                },
             },
             {
                 tokenId: '#0042',
@@ -55,9 +72,26 @@ export class PlayerProfile {
                 nickname: 'Blaze',
                 level: 8,
                 mintedBy: '0x1c4e...a820',
-                isOriginalMinter: false,   // Bought from marketplace
+                isOriginalMinter: false,
+                normalizedStats: {
+                    strength: 0.66,
+                    vitality: 0.52,
+                    agility: 0.49,
+                    dexterity: 0.42,
+                    intelligence: 0.57,
+                },
+                companionState: {
+                    battles: 1,
+                    wins: 1,
+                    gardenInteractions: 1,
+                    happiness: 54,
+                    expFromGarden: 10,
+                    coinsFound: 1,
+                },
             },
         ];
+
+        this.activeHashmonTokenId = this.ownedHashmon[0]?.tokenId || null;
 
         // ── Marketplace listings (mock) ──
         this.marketplaceListings = [
@@ -115,6 +149,65 @@ export class PlayerProfile {
         this.losses++;
         this.totalBattles++;
         this.elo = Math.max(0, this.elo - 20);
+    }
+
+    ensureCompanionState(nft) {
+        if (!nft) return defaultCompanionState();
+        nft.companionState = { ...defaultCompanionState(), ...(nft.companionState || {}) };
+        return nft.companionState;
+    }
+
+    setActiveHashmon(tokenId) {
+        const normalized = `#${normalizeTokenId(tokenId)}`;
+        const found = this.ownedHashmon.find((item) => `#${normalizeTokenId(item.tokenId)}` === normalized);
+        if (!found) return false;
+        this.activeHashmonTokenId = normalized;
+        return true;
+    }
+
+    getActiveHashmon() {
+        if (!this.ownedHashmon.length) return null;
+        const normalized = this.activeHashmonTokenId ? `#${normalizeTokenId(this.activeHashmonTokenId)}` : null;
+        const found = this.ownedHashmon.find((item) => `#${normalizeTokenId(item.tokenId)}` === normalized);
+        if (found) return found;
+        this.activeHashmonTokenId = this.ownedHashmon[0].tokenId;
+        return this.ownedHashmon[0];
+    }
+
+    getPortableHashmon(tokenId) {
+        const normalized = tokenId ? `#${normalizeTokenId(tokenId)}` : null;
+        const nft = normalized
+            ? this.ownedHashmon.find((item) => `#${normalizeTokenId(item.tokenId)}` === normalized)
+            : this.getActiveHashmon();
+
+        if (!nft) return null;
+        this.ensureCompanionState(nft);
+        return buildPortableCompanionProfile(nft);
+    }
+
+    getPortableActiveHashmon() {
+        return this.getPortableHashmon(this.activeHashmonTokenId);
+    }
+
+    registerBattleOutcome(didWin) {
+        const nft = this.getActiveHashmon();
+        if (!nft) return;
+        const state = this.ensureCompanionState(nft);
+        state.battles += 1;
+        if (didWin) state.wins += 1;
+    }
+
+    registerGardenInteraction(tokenId, outcome) {
+        const normalized = `#${normalizeTokenId(tokenId)}`;
+        const nft = this.ownedHashmon.find((item) => `#${normalizeTokenId(item.tokenId)}` === normalized);
+        if (!nft) return;
+
+        const state = this.ensureCompanionState(nft);
+        state.gardenInteractions += 1;
+        state.happiness = Math.min(100, state.happiness + 3);
+
+        if (outcome === 'coin') state.coinsFound += 1;
+        if (outcome === 'exp') state.expFromGarden += 10;
     }
 }
 

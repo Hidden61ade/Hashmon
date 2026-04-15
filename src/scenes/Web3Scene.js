@@ -13,6 +13,7 @@
 import { playerProfile, RANKS } from '../data/PlayerProfile.js';
 import { SPECIES, MOVES } from '../data/HashmonData.js';
 import { CONTRACTS, IPFS_GATEWAY, uploadToIPFS, uploadFileToIPFS } from '../data/ContractConfig.js';
+import { buildPortableCompanionProfile, COMPANION_SCHEMA_VERSION, normalizeTokenId } from '../data/CompanionProtocol.js';
 
 export class Web3Scene extends Phaser.Scene {
     constructor() {
@@ -223,6 +224,21 @@ export class Web3Scene extends Phaser.Scene {
         // ── Owned Hashmon count ──
         const ownY = recY + 110;
         this.contentGroup.add(this.addText(cardX + 30, ownY, `Hashmon Owned: ${pp.ownedHashmon.length}`, '18px', '#aabbcc'));
+
+        const portable = pp.getPortableActiveHashmon ? pp.getPortableActiveHashmon() : buildPortableCompanionProfile(pp.getActiveHashmon?.());
+        if (portable) {
+            const syncY = ownY + 35;
+            const syncBg = this.add.graphics();
+            syncBg.fillStyle(0x141a38, 1);
+            syncBg.fillRoundedRect(cardX + 30, syncY, 540, 95, 10);
+            syncBg.lineStyle(1, 0x3d67cc, 0.6);
+            syncBg.strokeRoundedRect(cardX + 30, syncY, 540, 95, 10);
+            this.contentGroup.add(syncBg);
+            this.contentGroup.add(this.addText(cardX + 45, syncY + 10, 'Active Companion Sync Proof', '16px', '#ffdd88'));
+            this.contentGroup.add(this.addText(cardX + 45, syncY + 34, `${portable.tokenId}  ${portable.identity.nickname} / ${portable.identity.speciesKey}`, '14px', '#ffffff'));
+            this.contentGroup.add(this.addText(cardX + 45, syncY + 56, `Battle → HP ${portable.adapters.battle.hp} | SPD ${portable.adapters.battle.speed} | Boost +${portable.adapters.battle.preBattleBoost}`, '13px', '#88ccff'));
+            this.contentGroup.add(this.addText(cardX + 45, syncY + 76, `Garden → Move ${portable.adapters.garden.roamingSpeed}px/s | Mood ${portable.state.happiness} | Interactions ${portable.state.gardenInteractions}`, '13px', '#88ddaa'));
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -234,7 +250,7 @@ export class Web3Scene extends Phaser.Scene {
         const startX = 55;
         const startY = 120;
         const cardW = 370;
-        const cardH = 250;
+        const cardH = 278;
         const gap = 25;
 
         if (pp.ownedHashmon.length === 0) {
@@ -250,6 +266,7 @@ export class Web3Scene extends Phaser.Scene {
             const cy = startY + row * (cardH + gap);
 
             const species = SPECIES[nft.speciesKey];
+            const isActive = `#${normalizeTokenId(nft.tokenId)}` === `#${normalizeTokenId(pp.activeHashmonTokenId)}`;
 
             // Card bg
             const cardBg = this.add.graphics();
@@ -286,6 +303,10 @@ export class Web3Scene extends Phaser.Scene {
                 this.contentGroup.add(this.addText(cx + 120, cy + 135, '◆ Acquired via Market', '13px', '#6688aa'));
             }
 
+            if (isActive) {
+                this.contentGroup.add(this.addText(cx + 225, cy + 135, '● Active in Battle & Garden', '13px', '#ffdd66'));
+            }
+
             // Base stats summary
             const bstSource = nft.stats || species.baseStats;
             const bst = Object.values(bstSource).reduce((a, b) => a + b, 0);
@@ -296,8 +317,23 @@ export class Web3Scene extends Phaser.Scene {
             this.contentGroup.add(this.addText(cx + 15, cy + 182, `Moves: ${moveNames[0] || '-'}, ${moveNames[1] || '-'}`, '12px', '#ccddff'));
             this.contentGroup.add(this.addText(cx + 15, cy + 200, `       ${moveNames[2] || '-'}, ${moveNames[3] || '-'}`, '12px', '#ccddff'));
 
-            // View in Inventory button
-            this.createContentButton(cx + cardW - 80, cy + cardH - 25, 'View Stats', () => {
+            this.createContentButton(cx + 62, cy + cardH - 22, isActive ? 'Active' : 'Set Active', () => {
+                playerProfile.setActiveHashmon(nft.tokenId);
+                this.showTab('myNfts');
+            });
+            this.createContentButton(cx + 160, cy + cardH - 22, 'Battle', () => {
+                playerProfile.setActiveHashmon(nft.tokenId);
+                this.scene.start('BattleScene');
+            });
+            this.createContentButton(cx + 250, cy + cardH - 22, 'List', async () => {
+                playerProfile.setActiveHashmon(nft.tokenId);
+                const price = window.prompt('输入上架价格（ETH）', '0.03');
+                if (price && Number(price) > 0) {
+                    await this.listHashmonForSale(nft.tokenId, String(price));
+                }
+            });
+            this.createContentButton(cx + cardW - 75, cy + cardH - 22, 'View Stats', () => {
+                playerProfile.setActiveHashmon(nft.tokenId);
                 this.scene.start('InventoryScene');
             });
         });
@@ -429,6 +465,10 @@ export class Web3Scene extends Phaser.Scene {
             'Hashmon NFT Marketplace', '26px', '#ffcc00').setOrigin(0.5));
         this.contentGroup.add(this.addText(this.cameras.main.centerX, startY + 30,
             'Browse and purchase Hashmon minted by other trainers', '14px', '#888899').setOrigin(0.5));
+        this.createContentButton(1080, startY + 14, 'Refresh Market', async () => {
+            await this.fetchMarketListings();
+            this.showTab('market');
+        });
 
         const listY = startY + 65;
         const rowH = 120;
@@ -500,6 +540,7 @@ export class Web3Scene extends Phaser.Scene {
             playerProfile.walletAddress = await signer.getAddress();
             this.updateWalletStatus();
             await this.fetchNFTs();
+            await this.fetchMarketListings();
             this.showTab(this.currentTab);
         } catch (e) {
             alert('钱包连接失败: ' + e.message);
@@ -547,9 +588,58 @@ export class Web3Scene extends Phaser.Scene {
                 type: metadata.attributes.type,
                 moves: metadata.attributes.moves,
                 stats: metadata.attributes.stats,
+                normalizedStats: metadata.attributes.normalizedStats,
+                companionState: metadata.attributes.companionState,
                 image: metadata.image,
                 customTextureKey,
             });
+        }
+
+        if (playerProfile.ownedHashmon.length > 0) {
+            playerProfile.setActiveHashmon(playerProfile.activeHashmonTokenId || playerProfile.ownedHashmon[0].tokenId);
+        }
+    }
+
+    async fetchMarketListings() {
+        const contractReady = CONTRACTS.Marketplace.address && !CONTRACTS.Marketplace.address.includes('Your') && CONTRACTS.Marketplace.abi.length;
+        const nftReady = CONTRACTS.HashmonNFT.address && !CONTRACTS.HashmonNFT.address.includes('Your') && CONTRACTS.HashmonNFT.abi.length;
+        if (!contractReady || !nftReady || typeof window.ethereum === 'undefined') return;
+
+        try {
+            const provider = new window.ethers.BrowserProvider(window.ethereum);
+            const market = new window.ethers.Contract(CONTRACTS.Marketplace.address, CONTRACTS.Marketplace.abi, provider);
+            const nft = new window.ethers.Contract(CONTRACTS.HashmonNFT.address, CONTRACTS.HashmonNFT.abi, provider);
+            const result = await market.getActiveListings();
+            const tokenIds = result[0] || [];
+            const rawListings = result[1] || [];
+            const refreshed = [];
+
+            for (let i = 0; i < tokenIds.length; i++) {
+                const listing = rawListings[i];
+                if (!listing || listing.active === false) continue;
+
+                const cleanTokenId = tokenIds[i].toString();
+                let tokenURI = await nft.tokenURI(cleanTokenId);
+                if (tokenURI.startsWith('ipfs://')) {
+                    tokenURI = IPFS_GATEWAY + tokenURI.replace('ipfs://', '');
+                }
+                const metadata = await fetch(tokenURI).then((r) => r.json());
+                refreshed.push({
+                    tokenId: `#${cleanTokenId.padStart(4, '0')}`,
+                    speciesKey: metadata.attributes.species,
+                    nickname: metadata.name,
+                    level: metadata.attributes.level,
+                    price: `${Number(window.ethers.formatEther(listing.price)).toFixed(3)} ETH`,
+                    seller: listing.seller,
+                    type: metadata.attributes.type,
+                    moves: metadata.attributes.moves,
+                    stats: metadata.attributes.stats,
+                });
+            }
+
+            playerProfile.marketplaceListings = refreshed;
+        } catch (e) {
+            console.warn('[Web3] marketplace refresh failed:', e);
         }
     }
 
@@ -588,6 +678,7 @@ export class Web3Scene extends Phaser.Scene {
             description: `A custom ${species.name} Hashmon minted on the Hashmon protocol.`,
             image: imageURI,
             external_url: '',
+            schema: COMPANION_SCHEMA_VERSION,
             attributes: {
                 species: speciesKey,
                 type: customType || species.type,
@@ -599,6 +690,18 @@ export class Web3Scene extends Phaser.Scene {
                 mintDate: new Date().toISOString().slice(0, 10),
                 originalSpeciesTemplate: false,
                 chainSeed: seed,
+                gameAdapters: {
+                    battle: 'turn-based-rpg/v1',
+                    garden: 'companion-garden/v1',
+                },
+                companionState: {
+                    battles: 0,
+                    wins: 0,
+                    gardenInteractions: 0,
+                    happiness: 50,
+                    expFromGarden: 0,
+                    coinsFound: 0,
+                },
             }
         };
 
@@ -623,9 +726,12 @@ export class Web3Scene extends Phaser.Scene {
                 type: customType,
                 moves: [...selectedMoves],
                 stats: { ...randomizedStats },
+                normalizedStats: { ...normalizedStats },
+                companionState: { battles: 0, wins: 0, gardenInteractions: 0, happiness: 50, expFromGarden: 0, coinsFound: 0 },
                 image: imageURI,
                 customTextureKey: previewTextureKey,
             });
+            playerProfile.setActiveHashmon(playerProfile.ownedHashmon[playerProfile.ownedHashmon.length - 1].tokenId);
             alert(`演示模式铸造成功，图片和元数据已上传到 IPFS。\nMetadata: ${tokenURI}`);
             this.showTab('myNfts');
             return;
@@ -640,6 +746,8 @@ export class Web3Scene extends Phaser.Scene {
             await tx.wait();
             alert('铸造成功并已上链！');
             await this.fetchNFTs();
+            const newest = playerProfile.ownedHashmon[playerProfile.ownedHashmon.length - 1];
+            if (newest) playerProfile.setActiveHashmon(newest.tokenId);
             this.showTab('myNfts');
         } catch (e) {
             alert('合约铸造失败，请检查是否已部署合约且当前网络正确: ' + e.message);
@@ -672,6 +780,7 @@ export class Web3Scene extends Phaser.Scene {
                 mintedBy: listing.seller,
                 isOriginalMinter: false,
             });
+            playerProfile.setActiveHashmon(listing.tokenId);
             alert('演示模式购买成功！');
             this.showTab('myNfts');
             return;
@@ -687,6 +796,8 @@ export class Web3Scene extends Phaser.Scene {
             await tx.wait();
             alert('购买成功！');
             await this.fetchNFTs();
+            await this.fetchMarketListings();
+            playerProfile.setActiveHashmon(listing.tokenId);
             this.showTab('myNfts');
         } catch (e) {
             alert('购买失败: ' + e.message);
@@ -731,6 +842,7 @@ export class Web3Scene extends Phaser.Scene {
             await tx.wait();
             alert('上架成功！');
             await this.fetchNFTs();
+            await this.fetchMarketListings();
             this.showTab('market');
         } catch (e) {
             alert('上架失败: ' + e.message);

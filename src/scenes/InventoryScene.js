@@ -29,7 +29,9 @@ export class InventoryScene extends Phaser.Scene {
         // ── Build the player's roster ──
         this.roster = this.buildRosterFromProfile();
 
-        this.selectedIndex = 0;
+        const activeToken = playerProfile.activeHashmonTokenId;
+        const activeIndex = this.roster.findIndex((mon) => mon.tokenId === activeToken);
+        this.selectedIndex = activeIndex >= 0 ? activeIndex : 0;
 
         // ── Left Panel: Roster List ──
         this.createRosterList();
@@ -37,7 +39,7 @@ export class InventoryScene extends Phaser.Scene {
         // ── Right Panel: Detail Card ──
         this.detailGroup = this.add.group();
         if (this.roster.length > 0) {
-            this.drawDetailCard(this.roster[0]);
+            this.drawDetailCard(this.roster[this.selectedIndex]);
         }
 
         // ── Back Button ──
@@ -69,12 +71,13 @@ export class InventoryScene extends Phaser.Scene {
 
         this.roster.forEach((mon, i) => {
             const y = startY + i * (slotH + 12);
+            const isSelected = i === this.selectedIndex;
 
             // Slot background
             const slotBg = this.add.graphics();
-            slotBg.fillStyle(i === 0 ? 0x224488 : 0x111133, 0.85);
+            slotBg.fillStyle(isSelected ? 0x224488 : 0x111133, 0.85);
             slotBg.fillRoundedRect(startX, y, 340, slotH, 10);
-            slotBg.lineStyle(2, i === 0 ? 0x4488ff : 0x333366, 0.7);
+            slotBg.lineStyle(2, isSelected ? 0x4488ff : 0x333366, 0.7);
             slotBg.strokeRoundedRect(startX, y, 340, slotH, 10);
 
             // Sprite thumbnail
@@ -177,6 +180,25 @@ export class InventoryScene extends Phaser.Scene {
         });
         this.detailGroup.add(hpT);
 
+        const tokenT = this.add.text(panelX + 240, panelY + 160, `Token: ${mon.tokenId || 'Untracked'}${playerProfile.activeHashmonTokenId === mon.tokenId ? '   ● Active' : ''}`, {
+            fontFamily: 'Futile', fontSize: '16px', color: '#ffdd88',
+        });
+        this.detailGroup.add(tokenT);
+
+        this.createActionButton(panelX + 650, panelY + 40, 'Set Active', () => {
+            playerProfile.setActiveHashmon(mon.tokenId);
+            this.drawDetailCard(mon);
+            this.refreshRosterHighlight();
+        });
+        this.createActionButton(panelX + 650, panelY + 80, 'Use in Battle', () => {
+            playerProfile.setActiveHashmon(mon.tokenId);
+            this.scene.start('BattleScene');
+        });
+        this.createActionButton(panelX + 650, panelY + 120, 'Open Garden', () => {
+            playerProfile.setActiveHashmon(mon.tokenId);
+            this.scene.start('GardenScene');
+        });
+
         // ── STAT BARS ──
         const statBarStartX = panelX + 40;
         const statBarStartY = panelY + 210;
@@ -229,6 +251,29 @@ export class InventoryScene extends Phaser.Scene {
             this.detailGroup.add(baseT);
         });
 
+        const portable = playerProfile.getPortableHashmon?.(mon.tokenId);
+        if (portable) {
+            const proofY = panelY + 430;
+            const proofBg = this.add.graphics();
+            proofBg.fillStyle(0x141a38, 0.96);
+            proofBg.fillRoundedRect(panelX + 30, proofY, 450, 105, 10);
+            proofBg.lineStyle(1, 0x3d67cc, 0.6);
+            proofBg.strokeRoundedRect(panelX + 30, proofY, 450, 105, 10);
+            this.detailGroup.add(proofBg);
+            this.detailGroup.add(this.add.text(panelX + 45, proofY + 10, 'Cross-Game Interoperability Proof', {
+                fontFamily: 'Futile', fontSize: '18px', color: '#ffdd88',
+            }));
+            this.detailGroup.add(this.add.text(panelX + 45, proofY + 36, `Schema: ${portable.schema}`, {
+                fontFamily: 'Futile', fontSize: '14px', color: '#ffffff',
+            }));
+            this.detailGroup.add(this.add.text(panelX + 45, proofY + 56, `Battle → SPD ${portable.adapters.battle.speed}, Boost +${portable.adapters.battle.preBattleBoost}`, {
+                fontFamily: 'Futile', fontSize: '13px', color: '#88ccff',
+            }));
+            this.detailGroup.add(this.add.text(panelX + 45, proofY + 76, `Garden → Move ${portable.adapters.garden.roamingSpeed}px/s, Mood ${portable.state.happiness}, Interactions ${portable.state.gardenInteractions}`, {
+                fontFamily: 'Futile', fontSize: '13px', color: '#88ddaa',
+            }));
+        }
+
         // ── MOVES LIST ──
         const moveStartX = panelX + 530;
         const moveStartY = panelY + 210;
@@ -279,6 +324,9 @@ export class InventoryScene extends Phaser.Scene {
             const mon = new Hashmon(nft.speciesKey, nft.level || 10);
             mon.name = nft.nickname || mon.name;
             mon.type = nft.type || mon.type;
+            mon.tokenId = nft.tokenId;
+            mon.normalizedStats = nft.normalizedStats || null;
+            mon.companionState = nft.companionState || null;
             mon.customTextureKey = nft.customTextureKey || null;
 
             if (nft.stats) {
@@ -309,6 +357,18 @@ export class InventoryScene extends Phaser.Scene {
     // ═══════════════════════════════════════════════════════════
     // BUTTON HELPER
     // ═══════════════════════════════════════════════════════════
+
+    createActionButton(x, y, text, onClick) {
+        const btn = this.add.image(x, y, 'btn_normal').setInteractive().setScale(2.2, 1.1);
+        const btnText = this.add.text(x, y, text, {
+            fontFamily: 'Futile', fontSize: '14px', color: '#ffffff',
+        }).setOrigin(0.5);
+
+        btn.on('pointerover', () => { btn.setTexture('btn_hover'); btnText.setColor('#ffff00'); });
+        btn.on('pointerout', () => { btn.setTexture('btn_normal'); btnText.setColor('#ffffff'); });
+        btn.on('pointerdown', () => btn.setTexture('btn_pressed'));
+        btn.on('pointerup', () => { btn.setTexture('btn_hover'); onClick(); });
+    }
 
     createButton(x, y, text, onClick) {
         const btn = this.add.image(x, y, 'btn_normal').setInteractive().setScale(3.5, 1.8);
