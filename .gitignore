@@ -1,5 +1,33 @@
 node_modules/
 .env
+.env.*
+!.env.example
 artifacts/
 cache/
 coverage/
+
+# Python / local environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# LaTeX / Overleaf build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+
+# Editor / OS files
+.vscode/
+.DS_Store
+Thumbs.db
