@@ -21,6 +21,20 @@ export class GardenScene extends Phaser.Scene {
             color: '#ffd700'
         });
 
+        const activePortable = playerProfile.getPortableActiveHashmon?.();
+        if (activePortable) {
+            this.add.text(220, 18, `Active: ${activePortable.tokenId} ${activePortable.identity.nickname}`, {
+                fontFamily: 'Futile',
+                fontSize: '18px',
+                color: '#ffdd88'
+            });
+            this.add.text(220, 42, `Portable speed → Garden ${activePortable.adapters.garden.roamingSpeed}px/s | Mood ${activePortable.state.happiness}`, {
+                fontFamily: 'Futile',
+                fontSize: '14px',
+                color: '#aaddff'
+            });
+        }
+
         // ── Exit Button ──
         const exitBtn = this.add.image(this.sys.game.config.width - 100, 40, 'btn_normal').setInteractive();
         exitBtn.setScale(1.5, 1);
@@ -58,23 +72,25 @@ export class GardenScene extends Phaser.Scene {
                 const startY = Phaser.Math.Between(150, this.sys.game.config.height - 100);
 
                 // Create Sprite
-                const sprite = this.hashmonGroup.create(startX, startY, speciesData.textureKey);
-                sprite.setScale(3); // make Hashmon bigger
+                const sprite = this.hashmonGroup.create(startX, startY, nft.customTextureKey || speciesData.textureKey);
+                this.fitImageToBox(sprite, 96, 96);
                 sprite.setInteractive();
                 sprite.setCollideWorldBounds(true);
                 sprite.setBounce(1);
 
                 // Name label
-                const label = this.add.text(startX, startY - 40, nft.nickname, {
+                const isActive = playerProfile.getActiveHashmon?.()?.tokenId === nft.tokenId;
+                const label = this.add.text(startX, startY - 40, `${isActive ? '★ ' : ''}${nft.nickname}`, {
                     fontFamily: 'Futile',
                     fontSize: '16px',
-                    color: '#ffffff'
+                    color: isActive ? '#ffdd88' : '#ffffff'
                 }).setOrigin(0.5);
 
-                // Semantic Mapping: 
-                // Normalized Agility (0.0-1.0) maps directly to roaming speed in the Garden.
-                const agility = speciesData.baseNormalizedStats.agility || 0.5;
-                sprite.targetSpeed = 50 + (agility * 200); // Base 50 + up to 200
+                // Semantic Mapping:
+                // Normalized agility from the companion schema maps to roaming speed in the Garden.
+                const portable = playerProfile.getPortableHashmon?.(nft.tokenId);
+                const agility = portable?.stats?.normalized?.agility ?? speciesData.baseNormalizedStats.agility ?? 0.5;
+                sprite.targetSpeed = 50 + (agility * 200);
 
                 // Store reference
                 sprite.nftData = nft;
@@ -88,6 +104,14 @@ export class GardenScene extends Phaser.Scene {
                 sprite.on('pointerdown', () => this.interactWithHashmon(sprite));
             });
         }
+    }
+
+    fitImageToBox(image, maxWidth, maxHeight) {
+        const sourceWidth = image.width || image.displayWidth || 1;
+        const sourceHeight = image.height || image.displayHeight || 1;
+        const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+        image.setScale(scale);
+        return image;
     }
 
     update() {
@@ -153,15 +177,18 @@ export class GardenScene extends Phaser.Scene {
         // 40% chance to find a coin
         if (r < 0.4) {
             playerProfile.coins += 1;
+            playerProfile.registerGardenInteraction?.(sprite.nftData?.tokenId, 'coin');
             this.coinText.setText(`Coins: ${playerProfile.coins}`);
             this.showFloatingText(sprite.x, sprite.y - 60, "+1 Coin!", '#ffd700');
         } 
         // 30% chance to increase a stat (Simulating ERC-6551 cross-game state saving)
         else if (r > 0.7) {
+            playerProfile.registerGardenInteraction?.(sprite.nftData?.tokenId, 'exp');
             this.showFloatingText(sprite.x, sprite.y - 60, "Exp +10!", '#00ffff');
         } 
         // 30% chance just happy
         else {
+            playerProfile.registerGardenInteraction?.(sprite.nftData?.tokenId, 'happy');
             this.showFloatingText(sprite.x, sprite.y - 60, "Happy!", '#ff66b2');
         }
     }

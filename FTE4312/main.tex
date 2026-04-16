@@ -1,0 +1,375 @@
+%% Hashmon Overleaf-ready paper
+\documentclass[sigconf]{acmart}
+
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    Bib\TeX}}}
+
+\copyrightyear{2026}
+\acmYear{2026}
+\setcopyright{none}
+\acmConference[FTE4312]{FTE4312 Course Project}{April 2026}{Shenzhen, China}
+\acmBooktitle{FTE4312 Course Project Report}
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{array}
+\usepackage{float}
+\usepackage{dblfloatfix}
+
+\graphicspath{{./}{graphs/}}
+\setkeys{Gin}{width=\linewidth,height=0.25\textheight,keepaspectratio}
+\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
+\setlength{\floatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.8}
+\renewcommand{\dbltopfraction}{0.9}
+\renewcommand{\dblfloatpagefraction}{0.8}
+\raggedbottom
+
+\title{Hashmon: A User-Generated, Cross-Game Digital Companion Ecosystem}
+
+\author{Baohua Fang}
+\affiliation{%
+  \institution{School of Science and Engineering}
+  \institution{The Chinese University of Hong Kong, Shenzhen}
+  \city{Shenzhen}
+  \state{Guangdong}
+  \country{China}}
+\email{baohuafang@link.cuhk.edu.cn}
+
+\author{Bai Qijia}
+\affiliation{%
+  \institution{School of Science and Engineering}
+  \institution{The Chinese University of Hong Kong, Shenzhen}
+  \city{Shenzhen}
+  \state{Guangdong}
+  \country{China}}
+
+\renewcommand{\shortauthors}{Fang and Bai}
+
+\begin{document}
+
+\begin{abstract}
+This paper presents Hashmon, a browser-based Web3 game prototype that explores how a user-generated digital companion can be minted as a non-fungible token and reused across multiple gameplay environments. The project is motivated by a simple question: if players spend time building an emotional bond with a monster companion, why should that companion be locked inside one isolated game? To investigate this, we build an end-to-end prototype using Phaser 3, Solidity, Ethers.js, OpenZeppelin Contracts, and IPFS. Users can connect a MetaMask wallet, create and mint a customized Hashmon as an ERC-721 NFT, store metadata and artwork on IPFS, and view or trade the companion through an integrated marketplace flow. Most importantly, the same NFT-backed Hashmon can be recognized and reused across two controlled game environments: a battle scene and a garden scene. Rather than claiming universal interoperability across the entire game industry, this project demonstrates a practical and verifiable form of controlled interoperability in which a shared companion identity, metadata, and portable attributes are interpreted consistently across different gameplay contexts.
+\end{abstract}
+
+\keywords{Web3 game, NFT, ERC-721, IPFS, Phaser 3, interoperability, digital companion}
+
+\maketitle
+
+\section{Introduction}
+Digital companions have long been central to monster-collection and pet-raising games. Players often invest time, emotion, and identity into these characters, yet in traditional game architectures such companions remain trapped in publisher-controlled databases. When the game ends or the platform changes, the companion usually cannot follow the player. This makes digital ownership fragile and undermines the long-term value of player effort.
+
+Hashmon was designed as a response to this problem. The core idea is to represent a game companion not merely as an application-level record but as a persistent digital asset with verifiable ownership and portable metadata. Inspired by decentralized asset platforms such as Web3DP~\cite{web3dp}, the ERC-721 NFT standard~\cite{erc721}, and decentralized storage systems such as IPFS~\cite{benet2014ipfs}, the project explores whether a single user-generated companion can be meaningfully reused across different gameplay environments.
+
+To keep the project academically grounded, we intentionally narrow the ambition of ``cross-game interoperability.'' Instead of claiming universal compatibility across arbitrary games, Hashmon demonstrates \emph{controlled interoperability}: the same NFT companion preserves its identity and selected portable attributes across two distinct scenes inside one real working DApp. This framing directly answers the practical challenge that different games interpret the same character statistics in different ways.
+
+The contributions of this paper are threefold:
+\begin{itemize}[leftmargin=1.5em]
+    \item We implement an end-to-end Web3 game prototype with wallet connection, NFT minting, IPFS metadata storage, and marketplace interaction.
+    \item We define a lightweight companion protocol layer for portable NFT companion data.
+    \item We demonstrate the same asset across a battle environment and a garden environment as a concrete proof of controlled interoperability.
+\end{itemize}
+
+\section{Design Goals and Scope}
+To keep the project academically rigorous and technically feasible, the development process followed four explicit design goals.
+
+\textbf{Persistent ownership.} A companion should belong to the user rather than to an isolated game database. This is why Hashmon uses ERC-721 tokens as the identity anchor for each creature.
+
+\textbf{User-generated creation.} The system should allow players to actively define nickname, species, moves, type, and visual appearance, making the companion feel personal rather than pre-authored.
+
+\textbf{Controlled interoperability.} The project should prove a realistic and measurable form of interoperability, namely the reuse of one NFT companion across multiple gameplay environments with consistent identity and portable attributes.
+
+\textbf{End-to-end demonstrability.} The prototype should support the full loop from wallet connection and NFT minting to inventory synchronization, scene reuse, and marketplace trading. This was especially important for the final course presentation and evaluation.
+
+The scope is intentionally constrained. Instead of claiming compatibility with arbitrary third-party games, the project focuses on a controlled prototype that clearly demonstrates how a portable companion layer can work in practice. This makes the final artifact both more credible and easier to evaluate.
+
+This constrained scope also improves the internal validity of the project. By limiting the testbed to two intentionally designed gameplay environments inside the same codebase, the observed reuse of the NFT companion can be attributed to the protocol design, metadata pipeline, and state bridge rather than to uncontrolled differences between external games or engines. In other words, the prototype is designed less as a commercial platform claim and more as a rigorous demonstrator of the underlying technical idea.
+
+A further benefit of this scope is reproducibility. All major stages of the user journey can be replayed during presentation or grading: wallet connection, token minting, ownership refresh, active companion selection, scene transition, and marketplace circulation. This reproducibility is particularly important for a course project because it allows evaluators to assess not only the concept but also the reliability of the working artifact.
+
+\section{Related Work and Background}
+Web3DP showed that decentralized infrastructure can support user-facing digital asset publication and management~\cite{web3dp}. In Hashmon, this idea is adapted from 3D content sharing to a game-companion setting. Ownership and transferability are built on top of ERC-721~\cite{erc721}, the standard interface for non-fungible tokens. Off-chain metadata and uploaded artwork are stored through IPFS, a content-addressed peer-to-peer storage system that improves persistence and portability~\cite{benet2014ipfs}.
+
+The future-facing motivation of this work is also closely related to ERC-6551~\cite{erc6551}, which proposes token-bound accounts so that NFTs may accumulate assets and state of their own. Although Hashmon does not fully implement ERC-6551 accounts, its protocol layer and state-carryover design are informed by that direction. From an engineering perspective, the client-side chain interaction relies on Ethers.js~\cite{ethersjs}, while the smart contracts build on OpenZeppelin's audited contract library~\cite{openzeppelin}. The interactive game experience is implemented with Phaser~\cite{phaser}.
+
+One challenge repeatedly emphasized in the broader Web3 gaming discourse is that ownership and interoperability are often conflated. Owning an asset on-chain is relatively straightforward once a token standard is adopted; making that asset meaningful across multiple applications is much harder. The difficulty lies in semantic mismatch: one game may interpret a creature's statistics, growth, or equipment very differently from another. Hashmon explicitly addresses this gap by introducing a portable companion layer that maps a shared subset of attributes into scene-specific logic.
+
+This distinction is also what separates the present work from many purely marketplace-centered NFT projects. Rather than stopping at minting and trading, Hashmon treats the NFT as a persistent game entity whose meaning continues after the transaction. The value of the work therefore lies not only in token issuance but also in the system design that allows the token to participate in multiple forms of gameplay.
+
+\section{System Design}
+Hashmon adopts a layered architecture that combines a browser game frontend, a blockchain asset layer, and decentralized metadata storage.
+
+\begin{figure*}[!tbp]
+  \centering
+  \includegraphics[width=0.9\textwidth]{graphs/hashmon_system_architecture.png}
+  \caption{Overall system architecture of Hashmon. The Phaser frontend communicates with MetaMask through Ethers.js, interacts with the NFT and marketplace contracts on Sepolia, and resolves metadata through IPFS.}
+  \label{fig:architecture}
+\end{figure*}
+
+At the application layer, the system is organized into several Phaser scenes: a start scene, a Web3 hub, an inventory scene, a battle scene, and a garden scene. At the blockchain layer, two Solidity contracts support the asset lifecycle: one contract for NFT minting and one for marketplace listing and purchase. At the storage layer, metadata JSON and companion artwork are uploaded to IPFS using Pinata as a pinning service.
+
+A key design element is the \emph{Companion Protocol} layer. This protocol standardizes identity information such as token ID, nickname, species, and type, as well as portable attributes such as agility, vitality, speed, and interaction state. By exposing a shared subset of meaning, the protocol allows different gameplay scenes to interpret the same NFT consistently while still using their own mechanics.
+
+\begin{table}[t]
+  \caption{Core components of the Hashmon prototype and their roles.}
+  \label{tab:components}
+  \centering
+  \begin{tabular}{p{0.24\linewidth}p{0.66\linewidth}}
+    \toprule
+    Component & Primary responsibility \\
+    \midrule
+    Phaser scenes & Render gameplay interfaces and scene-specific interaction logic \\
+    Companion protocol & Normalize NFT identity, stats, and portable state \\
+    Player profile layer & Maintain active companion selection and cross-scene state updates \\
+    NFT contract & Mint ERC-721 tokens and bind metadata URIs to companions \\
+    Marketplace contract & Support listing, browsing, and purchase of tokenized companions \\
+    IPFS storage & Persist artwork and metadata outside a centralized game database \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+This separation of concerns proved useful during implementation. The frontend could evolve rapidly at the scene level without changing the blockchain interface each time, while the protocol layer acted as a stable bridge between the wallet-derived NFT data and the needs of each gameplay module. As a result, the project maintained a relatively clean architecture despite integrating both game logic and Web3 functionality.
+
+\begin{figure*}[!tbp]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{HomeScene.png}
+    \caption{Game home scene and navigation entry points.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{ConnectwalletScene.png}
+    \caption{Web3 wallet entry page.}
+  \end{subfigure}
+
+  \vspace{0.6em}
+
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{ConnectwithMetaMask.png}
+    \caption{MetaMask authorization interface.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\linewidth]{CreateMint.png}
+    \caption{Create-and-mint panel for customized companions.}
+  \end{subfigure}
+  \caption{Core frontend interfaces of the Hashmon prototype, from game entry to wallet-based creation.}
+  \label{fig:ui-overview}
+\end{figure*}
+
+The user interface was designed to make the Web3 workflow visible rather than hidden. Players can clearly see when they are entering the wallet flow, when they are defining companion metadata, and when the asset becomes available inside the game world. This transparency is useful in both a teaching context and a prototype evaluation context.
+
+\section{Workflow and Implementation}
+The user workflow starts when a player connects MetaMask in the Web3 hub. After wallet connection, the frontend queries the NFT contract for owned token IDs and token URIs, resolves metadata through IPFS, and reconstructs the in-game representation of each Hashmon.
+
+Users can then create a new companion by specifying nickname, species, type, moves, and optional custom artwork. The application uploads the artwork and metadata to IPFS and finally calls the mint function on the Sepolia NFT contract. This creates a full browser-to-chain minting pipeline, as illustrated in Figures~\ref{fig:wallet-mint} and~\ref{fig:ownership-views}.
+
+\begin{figure*}[!tbp]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{ConnectedwithMetaMask.png}
+    \caption{Wallet successfully connected to the prototype.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{MintProcess.png}
+    \caption{Mint transaction and upload process.}
+  \end{subfigure}
+
+  \vspace{0.6em}
+
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{NewHasmonMinted.png}
+    \caption{Confirmation that a new Hashmon has been minted.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{NewNFTMintedinwallet.png}
+    \caption{The newly minted NFT reflected in the wallet view.}
+  \end{subfigure}
+  \caption{Wallet connection and mint lifecycle in the Hashmon prototype.}
+  \label{fig:wallet-mint}
+\end{figure*}
+
+A complete mint cycle is particularly important for demonstrating that the prototype is not a purely visual mock-up. The screenshots show the chain-aware lifecycle of the asset, beginning with wallet authorization and ending with the companion appearing as a user-owned NFT.
+
+\begin{figure*}[!tbp]
+  \centering
+  \includegraphics[width=0.92\textwidth]{graphs/hashmon_end_to_end_workflow.png}
+  \caption{End-to-end workflow from wallet connection to minting, gameplay reuse, and marketplace trading.}
+  \label{fig:workflow}
+\end{figure*}
+
+The marketplace extends the prototype beyond minting by allowing users to list companions for sale and buy listed NFTs from other wallets. This makes the NFT meaningful not only as a collectible but also as a tradable Web3 game asset.
+
+\begin{figure*}[!tbp]
+  \centering
+  \includegraphics[width=0.78\textwidth,height=0.26\textheight,keepaspectratio]{MarketPlace.png}
+  \caption{Integrated marketplace interface showing listed Hashmon NFTs and prices.}
+  \label{fig:marketplace}
+\end{figure*}
+
+\begin{figure*}[!tbp]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{HashmonReadfromWallet.png}
+    \caption{Reading NFT companion metadata directly from the wallet.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{MyNFTs.png}
+    \caption{Personal NFT inventory view.}
+  \end{subfigure}
+
+  \vspace{0.6em}
+
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{MyhashmonScene.png}
+    \caption{Detailed My Hashmon management scene.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{AllMintedHashmons.png}
+    \caption{Global overview of minted Hashmon assets.}
+  \end{subfigure}
+  \caption{Wallet-derived ownership and inventory views after NFT minting.}
+  \label{fig:ownership-views}
+\end{figure*}
+
+These interfaces collectively demonstrate that the NFT is not treated as an isolated token identifier. Instead, the token becomes part of the player-facing companion management loop, making ownership visible, inspectable, and actionable within the game client.
+
+From an engineering standpoint, one of the most important implementation upgrades was the introduction of an \emph{active companion} mechanism. Instead of relying on scene-local demo data, the system allows one user-owned NFT to be selected as the currently active Hashmon. This active asset is then consumed by both the battle and garden modules. Metadata normalization and lightweight state management are handled in the shared player profile and companion protocol code.
+
+A second major engineering decision was the division between on-chain and off-chain information. The NFT contract stores ownership and metadata pointers, which provide persistence and transferability. The IPFS layer stores richer descriptive content such as artwork and structured metadata fields. Meanwhile, the game client interprets this metadata in real time and maintains lightweight gameplay progression during a session. This division was chosen because it balances decentralization with usability: critical identity and ownership stay verifiable on-chain, while richer media and fast-changing interface state remain efficient to manage.
+
+The implementation process also highlighted practical development challenges typical of Web3 frontends. Wallet connection needs to be resilient to browser state and user permission flow; metadata retrieval needs to handle asynchronous loading and inconsistent gateways; and scene synchronization needs to avoid drifting into hardcoded demo data. Solving these issues was not only an engineering task but also part of the research contribution, because the final prototype had to show a believable end-to-end experience rather than isolated technical fragments.
+
+\section{Controlled Interoperability Demonstration}
+The main research question of this project is what interoperability should mean in a realistic course-scale system. The answer provided by Hashmon is not universal asset portability across the whole game industry, but a controlled and verifiable proof that the same NFT can preserve identity and selected meaning across two different gameplay environments.
+
+In the \textbf{Battle Scene}, the active Hashmon is interpreted as a turn-based combat unit. Its battle-related statistics influence health, damage, and speed. In the \textbf{Garden Scene}, the same Hashmon is interpreted as a roaming pet-like companion whose normalized agility affects movement speed, while interaction counters and happiness values affect its state.
+
+\begin{figure*}[!tbp]
+  \centering
+  \includegraphics[width=0.92\textwidth]{graphs/hashmon_interoperability_mapping.png}
+  \caption{Controlled interoperability mapping for the same NFT companion across different scenes.}
+  \label{fig:interop-map}
+\end{figure*}
+
+\begin{figure*}[!tbp]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{StatusWithCrossGameInteroperabilityProof.png}
+    \caption{Inventory-based cross-game proof panel.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \includegraphics[height=0.22\textheight,keepaspectratio]{GardenScene.png}
+    \caption{Garden scene using the active NFT companion.}
+  \end{subfigure}
+
+  \vspace{0.6em}
+
+  \begin{subfigure}{0.70\textwidth}
+    \includegraphics[height=0.23\textheight,keepaspectratio]{BattleScene.png}
+    \caption{Battle scene reusing the same NFT-backed Hashmon.}
+  \end{subfigure}
+  \caption{Visual evidence of cross-scene NFT reuse in the final prototype.}
+  \label{fig:interop-proof}
+\end{figure*}
+
+This mapping solves a key conceptual issue: the same numeric fields are not blindly reused, but reinterpreted through scene-specific adapters. For example, agility can influence roaming behavior in the garden while speed influences turn order in battle. In addition, interactions performed in the garden increment lightweight companion state such as happiness and experience, which is then surfaced again when the NFT appears in the battle scene. This establishes a basic but concrete form of state carryover.
+
+\section{Prototype Demonstration Scenarios}
+To make the prototype easier to evaluate, the final system can be understood through four demonstration scenarios.
+
+\textbf{Scenario 1: Wallet onboarding.} A user launches the game, enters the Web3 hub, and authorizes MetaMask. This creates the bridge between off-chain gameplay and on-chain ownership.
+
+\textbf{Scenario 2: User-generated companion minting.} The player creates a personalized Hashmon, uploads artwork and metadata, and mints the companion as an NFT on Sepolia. This validates the project's user-generated asset pipeline.
+
+\textbf{Scenario 3: Cross-scene reuse.} The player selects an owned NFT as the active companion, then reuses it in both the garden and battle scenes. This demonstrates identity persistence and portable state interpretation.
+
+\textbf{Scenario 4: Marketplace circulation.} The companion can be listed for sale and browsed through the marketplace interface, showing that the NFT is part of a broader asset lifecycle rather than a static trophy.
+
+Together, these scenarios provide a complete narrative for live demo presentation: connect, mint, inspect, reuse, and trade. This sequence also mirrors the practical evaluation criteria applied during development.
+
+\section{Evaluation and Results}
+The final system was evaluated primarily as a functional prototype. The main criteria were whether the application could complete the full Web3 loop and whether the interoperability claim could be demonstrated clearly and credibly.
+
+To make this evaluation more systematic, the prototype was tested through repeated end-to-end walkthroughs rather than isolated feature checks. Each walkthrough began from a fresh browser session, proceeded through wallet connection, asset synchronization, and minting, and ended with scene reuse and marketplace interaction. This method was chosen because the main value of the project lies in the continuity of the overall experience, not in any single isolated API call.
+
+The evaluation also focused on consistency. A successful result required that the same companion identity remain recognizable across the inventory, battle, and garden scenes, and that the user could trace a clear line from token ownership to scene participation. This emphasis on continuity is especially important for interoperability claims, since disconnected features do not provide meaningful evidence of portability.
+
+\subsection{Evaluation Dimensions}
+Beyond simple feature completeness, the project was evaluated along four dimensions: ownership validity, content persistence, cross-scene reuse, and user-facing clarity. Ownership validity asks whether the minted asset is genuinely tied to the connected wallet. Content persistence asks whether artwork and metadata remain retrievable through the IPFS-backed token URI. Cross-scene reuse asks whether the selected NFT can be meaningfully consumed by more than one gameplay environment. User-facing clarity asks whether the demo is understandable enough for an evaluator to follow without needing access to internal source code.
+
+\begin{table}[t]
+  \caption{Functional evaluation of the Hashmon prototype.}
+  \label{tab:features}
+  \centering
+  \begin{tabular}{p{0.40\linewidth}p{0.16\linewidth}p{0.30\linewidth}}
+    \toprule
+    Feature & Status & Evidence \\
+    \midrule
+    Local game launch & Yes & Start scene \\
+    MetaMask wallet connection & Yes & Web3 hub screenshots \\
+    User-customized NFT minting & Yes & Create-and-mint flow \\
+    IPFS image and metadata upload & Yes & Mint process \\
+    NFT retrieval from wallet & Yes & Inventory view \\
+    Marketplace listing and browsing & Yes & Marketplace scene \\
+    Cross-scene active companion reuse & Yes & Battle and garden scenes \\
+    Interoperability proof panel & Yes & Inventory proof view \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The results show that Hashmon successfully supports wallet connection, NFT minting, metadata retrieval, marketplace interaction, and scene-level reuse of the same asset. More importantly, the interoperability proof is not limited to showing the same picture twice: it demonstrates identity persistence, asset reuse, scene-specific reinterpretation of shared attributes, and limited state carryover between environments.
+
+For the scope of an undergraduate course project, this constitutes a meaningful and credible proof-of-concept. The prototype does not solve the general problem of cross-studio interoperability, but it does validate a concrete architecture that future work can extend.
+
+\subsection{Observed Strengths of the Prototype}
+Several strengths became clear during the final integration and demonstration process. First, the prototype provides a rare combination of user-generated content and on-chain ownership within a lightweight browser game. This makes the system immediately understandable to a course evaluator: the user can see what was created, what was minted, and how it is reused. Second, the active-companion mechanism makes the interoperability claim tangible instead of abstract. Third, the marketplace flow demonstrates that the NFT also participates in an economic lifecycle beyond scene rendering.
+
+Another strength is the coherence of the user story. The prototype does not merely expose a set of technical endpoints; it gives the player a narrative sequence in which a companion is born, owned, carried into different contexts, and potentially exchanged. This coherence improves the explanatory power of the project and aligns well with the broader design motivation of preserving attachment to long-lived digital companions.
+
+\section{Discussion}
+The most important lesson from this project is that ownership alone is not enough. Simply minting a game creature as an NFT does not automatically make it interoperable. What matters is the protocol layer that defines which parts of the companion's identity and behavior are portable across contexts. In Hashmon, this meant building a lightweight semantic bridge between wallet ownership, metadata, and scene-specific gameplay logic.
+
+A second lesson is that usability matters as much as blockchain functionality. During implementation, features such as clear wallet feedback, visible inventory synchronization, and intuitive scene navigation were essential for making the prototype understandable to evaluators. In a course project, technical correctness and presentation clarity reinforce each other.
+
+Finally, the project suggests that Web3 can be most compelling in games when it supports long-term emotional attachment rather than purely speculative asset trading. The idea of carrying a familiar companion into future experiences is a stronger design motivation than tokenization alone, and it points toward more player-centered Web3 game systems.
+
+A related reflection concerns scope management. Early in the project, it was tempting to describe the system as a broad multi-game platform. In practice, a narrower claim produced a stronger result. By concentrating on a controlled proof of interoperability rather than a vague promise of universal compatibility, the project became easier to finish, easier to demonstrate, and more persuasive as a technical artifact. This lesson is relevant to many student projects in emerging technology domains: precision of scope often improves both credibility and implementation quality.
+
+\section{Limitations and Future Work}
+The project still has several limitations. First, the current implementation only demonstrates interoperability across two controlled scenes within one prototype. A truly open ecosystem would require broader protocol standardization and adoption by multiple developers. Second, most portable state is still managed at the application layer rather than through full token-bound accounts. Future versions could integrate ERC-6551-style accounts so that each Hashmon may directly hold items, rewards, or persistent progression on-chain.
+
+\subsection{Threats to Validity}
+As with many prototype-driven studies, several threats to validity should be acknowledged. The evaluation is primarily qualitative and scenario-based rather than based on a large-scale user study. This means that while the system demonstrates feasibility, it does not yet measure broader user acceptance, long-term engagement, or the economic behavior of a larger player community. In addition, because the prototype is built on a controlled Sepolia testnet environment, its operational reliability may differ from a production deployment on a more heavily used network.
+
+Another limitation is the bounded meaning of the companion protocol itself. The protocol currently captures only a compact set of fields that are sufficient for the battle and garden scenes. More diverse future games might require richer semantics for equipment, social relationships, progression trees, or AI-driven behaviors. Therefore, the current system should be understood as a minimal viable interoperability layer rather than a final universal standard.
+
+Additional future work includes richer battle and garden mechanics, a more polished marketplace interface, stronger backend security for IPFS credential handling, and support for richer avatar or 3D asset formats that more closely match the original long-term platform vision. A particularly promising direction is to extend the protocol so that other lightweight mini-games can read the same NFT companion and interpret its state according to their own mechanics. Doing so would move the project one step closer to a small but genuine multi-experience companion ecosystem.
+
+\section{Conclusion}
+Hashmon demonstrates a practical Web3 approach to digital companion ownership and reuse. By combining ERC-721 ownership, IPFS-based metadata, a browser-based Phaser frontend, and a lightweight companion protocol, the system shows that cross-game interoperability can be made concrete in a controlled environment. The same NFT companion preserves identity, carries portable state, and is meaningfully reinterpreted across distinct gameplay contexts.
+
+While the project remains a prototype, it provides a solid technical foundation and a credible research direction for future Web3-native game ecosystems centered on persistent user-owned companions.
+
+\section*{Contribution Statement}
+The frontend implementation, Web3 integration, smart contract debugging, IPFS pipeline, interoperability design, report drafting, and presentation preparation were completed primarily by Baohua Fang. The final workload distribution of the project was significantly uneven.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}

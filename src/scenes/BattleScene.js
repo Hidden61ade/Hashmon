@@ -21,6 +21,7 @@
 import { Hashmon } from '../data/Hashmon.js';
 import { BattleEngine } from '../battle/BattleEngine.js';
 import { playerProfile } from '../data/PlayerProfile.js';
+import { MOVES } from '../data/HashmonData.js';
 
 export class BattleScene extends Phaser.Scene {
     constructor() {
@@ -42,8 +43,11 @@ export class BattleScene extends Phaser.Scene {
         // ═══════════════════════════════════════════════════════
         // 2. CREATE HASHMON INSTANCES
         // ═══════════════════════════════════════════════════════
-        this.playerMon = new Hashmon('WaterRat', 10);
-        this.enemyMon = new Hashmon('FireDragon', 10);
+        this.activePortable = playerProfile.getPortableActiveHashmon ? playerProfile.getPortableActiveHashmon() : null;
+        const activeNft = playerProfile.getActiveHashmon ? playerProfile.getActiveHashmon() : null;
+        this.playerMon = activeNft ? this.buildMonFromNft(activeNft) : new Hashmon('WaterRat', 10);
+        const enemySpecies = this.playerMon.speciesKey === 'FireDragon' ? 'WaterRat' : 'FireDragon';
+        this.enemyMon = new Hashmon(enemySpecies, Math.max(8, this.playerMon.level));
         this.engine = new BattleEngine(this.playerMon, this.enemyMon);
         this.isAnimating = false;
 
@@ -51,7 +55,8 @@ export class BattleScene extends Phaser.Scene {
         // 3. HASHMON SPRITES (positioned in the middle zone)
         // ═══════════════════════════════════════════════════════
         // Player sprite — left side, vertically centered in battle area
-        this.playerSprite = this.add.image(220, 340, 'water_rat').setScale(3);
+        this.playerSprite = this.add.image(220, 340, this.playerMon.customTextureKey || this.playerMon.textureKey);
+        this.fitImageToBox(this.playerSprite, 120, 120);
         this.tweens.add({
             targets: this.playerSprite,
             y: 330, duration: 1500, yoyo: true, repeat: -1,
@@ -59,7 +64,8 @@ export class BattleScene extends Phaser.Scene {
         });
 
         // Enemy sprite — right side
-        this.enemySprite = this.add.image(1060, 340, 'fire_dragon').setScale(3).setFlipX(true);
+        this.enemySprite = this.add.image(1060, 340, this.enemyMon.textureKey).setFlipX(true);
+        this.fitImageToBox(this.enemySprite, 120, 120);
         this.tweens.add({
             targets: this.enemySprite,
             y: 325, duration: 2000, yoyo: true, repeat: -1,
@@ -75,8 +81,9 @@ export class BattleScene extends Phaser.Scene {
         // 5. BATTLE LOG (top center, compact)
         // ═══════════════════════════════════════════════════════
         this.createBattleLog();
-        this.addLogMessage('A wild FireDragon appeared!');
-        this.addLogMessage('What will WaterRat do?');
+        this.addLogMessage(`A rival ${this.enemyMon.name} appeared!`);
+        this.addLogMessage(`What will ${this.playerMon.name} do?`);
+        this.createInteropBanner();
 
         // ═══════════════════════════════════════════════════════
         // 6. BOTTOM PANEL + SKILL BUTTONS
@@ -92,6 +99,14 @@ export class BattleScene extends Phaser.Scene {
     // ═══════════════════════════════════════════════════════════
     // STAT HUD CARDS — compact version (280×70)
     // ═══════════════════════════════════════════════════════════
+
+    fitImageToBox(image, maxWidth, maxHeight) {
+        const sourceWidth = image.width || image.displayWidth || 1;
+        const sourceHeight = image.height || image.displayHeight || 1;
+        const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+        image.setScale(scale);
+        return image;
+    }
 
     createStatHuds() {
         // Player HUD — top-left, above the player sprite
@@ -369,7 +384,7 @@ export class BattleScene extends Phaser.Scene {
             this.drawHpBar(this.playerHud);
             this.drawHpBar(this.enemyHud);
             this.isAnimating = false;
-            this.addLogMessage('What will WaterRat do?');
+            this.addLogMessage(`What will ${this.playerMon.name} do?`);
         });
     }
 
@@ -467,11 +482,13 @@ export class BattleScene extends Phaser.Scene {
     handleBattleEnd() {
         if (this.engine.didPlayerWin()) {
             playerProfile.recordWin();
-            this.addLogMessage('You defeated FireDragon!');
+            playerProfile.registerBattleOutcome?.(true);
+            this.addLogMessage(`You defeated ${this.enemyMon.name}!`);
             this.addLogMessage(`Victory!  +25 ELO  (${playerProfile.elo})`);
         } else {
             playerProfile.recordLoss();
-            this.addLogMessage('WaterRat fainted...');
+            playerProfile.registerBattleOutcome?.(false);
+            this.addLogMessage(`${this.playerMon.name} fainted...`);
             this.addLogMessage(`You blacked out!  -20 ELO  (${playerProfile.elo})`);
         }
         this.time.delayedCall(3000, () => this.scene.start('StartScene'));
@@ -480,6 +497,55 @@ export class BattleScene extends Phaser.Scene {
     // ═══════════════════════════════════════════════════════════
     // PLAYER RANK BADGE
     // ═══════════════════════════════════════════════════════════
+
+    createInteropBanner() {
+        if (!this.activePortable) return;
+
+        const bx = 20;
+        const by = 92;
+        const panel = this.add.graphics();
+        panel.fillStyle(0x111122, 0.82);
+        panel.fillRoundedRect(bx, by, 300, 48, 8);
+        panel.lineStyle(1, 0x3c7cff, 0.5);
+        panel.strokeRoundedRect(bx, by, 300, 48, 8);
+
+        this.add.text(bx + 10, by + 8, `Active NFT ${this.activePortable.tokenId}  ${this.playerMon.name}`, {
+            fontFamily: 'Futile', fontSize: '14px', color: '#ffdd88',
+        });
+        this.add.text(bx + 10, by + 26, `Garden sync boost +${this.activePortable.adapters.battle.preBattleBoost}  |  Mood ${this.activePortable.state.happiness}`, {
+            fontFamily: 'Futile', fontSize: '12px', color: '#88ddaa',
+        });
+    }
+
+    buildMonFromNft(nft) {
+        const mon = new Hashmon(nft.speciesKey, nft.level || 10);
+        mon.name = nft.nickname || mon.name;
+        mon.type = nft.type || mon.type;
+        mon.customTextureKey = nft.customTextureKey || null;
+
+        if (nft.stats) {
+            mon.baseStats = { ...mon.baseStats, ...nft.stats };
+        }
+
+        if (Array.isArray(nft.moves) && nft.moves.length) {
+            mon.moves = nft.moves.map((key, i) => {
+                const move = MOVES[key];
+                if (!move) return mon.moves[i] || mon.moves[0];
+                return { ...move, currentPP: move.pp };
+            });
+        }
+
+        const portable = playerProfile.getPortableHashmon?.(nft.tokenId);
+        const boost = portable?.adapters?.battle?.preBattleBoost || 0;
+        if (boost > 0) {
+            mon.baseStats.atk += Math.floor(boost / 2);
+            mon.baseStats.speed += boost;
+        }
+
+        mon.maxHp = mon.calcMaxHp();
+        mon.currentHp = mon.maxHp;
+        return mon;
+    }
 
     createRankBadge() {
         const rank = playerProfile.getRank();
