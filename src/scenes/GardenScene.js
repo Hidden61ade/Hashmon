@@ -73,7 +73,7 @@ export class GardenScene extends Phaser.Scene {
 
                 // Create Sprite
                 const sprite = this.hashmonGroup.create(startX, startY, nft.customTextureKey || speciesData.textureKey);
-                sprite.setScale(3); // make Hashmon bigger
+                this.fitImageToBox(sprite, 96, 96);
                 sprite.setInteractive();
                 sprite.setCollideWorldBounds(true);
                 sprite.setBounce(1);
@@ -104,6 +104,14 @@ export class GardenScene extends Phaser.Scene {
                 sprite.on('pointerdown', () => this.interactWithHashmon(sprite));
             });
         }
+    }
+
+    fitImageToBox(image, maxWidth, maxHeight) {
+        const sourceWidth = image.width || image.displayWidth || 1;
+        const sourceHeight = image.height || image.displayHeight || 1;
+        const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+        image.setScale(scale);
+        return image;
     }
 
     update() {

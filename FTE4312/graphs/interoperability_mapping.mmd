@@ -1,0 +1,16 @@
+flowchart TD
+    NFT[Same Hashmon NFT]
+    NFT --> ID[Shared Identity<br/>Token ID Name Species]
+    NFT --> PST[Portable Stats<br/>Agility Vitality Speed]
+    NFT --> STATE[Companion State<br/>Happiness Interactions EXP]
+
+    ID --> BTL[Battle Scene]
+    PST --> BTL
+    STATE --> BTL
+
+    ID --> GRD[Garden Scene]
+    PST --> GRD
+    STATE --> GRD
+
+    BTL --> OUT1[Turn Order Damage Boost HUD]
+    GRD --> OUT2[Roaming Speed Mood Interaction Feedback]

@@ -81,7 +81,8 @@ export class InventoryScene extends Phaser.Scene {
             slotBg.strokeRoundedRect(startX, y, 340, slotH, 10);
 
             // Sprite thumbnail
-            this.add.image(startX + 50, y + slotH / 2, mon.customTextureKey || mon.textureKey).setScale(1.8);
+            const thumb = this.add.image(startX + 50, y + slotH / 2, mon.customTextureKey || mon.textureKey);
+            this.fitImageToBox(thumb, 58, 58);
 
             // Name + Level
             this.add.text(startX + 100, y + 12, mon.name, {
@@ -153,7 +154,8 @@ export class InventoryScene extends Phaser.Scene {
         this.detailGroup.add(cardBg);
 
         // ── Sprite (large) ──
-        const spriteImg = this.add.image(panelX + 120, panelY + 120, mon.customTextureKey || mon.textureKey).setScale(4);
+        const spriteImg = this.add.image(panelX + 120, panelY + 120, mon.customTextureKey || mon.textureKey);
+        this.fitImageToBox(spriteImg, 160, 160);
         this.detailGroup.add(spriteImg);
 
         // ── Name / Type / Level ──
@@ -357,6 +359,14 @@ export class InventoryScene extends Phaser.Scene {
     // ═══════════════════════════════════════════════════════════
     // BUTTON HELPER
     // ═══════════════════════════════════════════════════════════
+
+    fitImageToBox(image, maxWidth, maxHeight) {
+        const sourceWidth = image.width || image.displayWidth || 1;
+        const sourceHeight = image.height || image.displayHeight || 1;
+        const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+        image.setScale(scale);
+        return image;
+    }
 
     createActionButton(x, y, text, onClick) {
         const btn = this.add.image(x, y, 'btn_normal').setInteractive().setScale(2.2, 1.1);

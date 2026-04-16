@@ -55,7 +55,8 @@ export class BattleScene extends Phaser.Scene {
         // 3. HASHMON SPRITES (positioned in the middle zone)
         // ═══════════════════════════════════════════════════════
         // Player sprite — left side, vertically centered in battle area
-        this.playerSprite = this.add.image(220, 340, this.playerMon.customTextureKey || this.playerMon.textureKey).setScale(3);
+        this.playerSprite = this.add.image(220, 340, this.playerMon.customTextureKey || this.playerMon.textureKey);
+        this.fitImageToBox(this.playerSprite, 120, 120);
         this.tweens.add({
             targets: this.playerSprite,
             y: 330, duration: 1500, yoyo: true, repeat: -1,
@@ -63,7 +64,8 @@ export class BattleScene extends Phaser.Scene {
         });
 
         // Enemy sprite — right side
-        this.enemySprite = this.add.image(1060, 340, this.enemyMon.textureKey).setScale(3).setFlipX(true);
+        this.enemySprite = this.add.image(1060, 340, this.enemyMon.textureKey).setFlipX(true);
+        this.fitImageToBox(this.enemySprite, 120, 120);
         this.tweens.add({
             targets: this.enemySprite,
             y: 325, duration: 2000, yoyo: true, repeat: -1,
@@ -97,6 +99,14 @@ export class BattleScene extends Phaser.Scene {
     // ═══════════════════════════════════════════════════════════
     // STAT HUD CARDS — compact version (280×70)
     // ═══════════════════════════════════════════════════════════
+
+    fitImageToBox(image, maxWidth, maxHeight) {
+        const sourceWidth = image.width || image.displayWidth || 1;
+        const sourceHeight = image.height || image.displayHeight || 1;
+        const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+        image.setScale(scale);
+        return image;
+    }
 
     createStatHuds() {
         // Player HUD — top-left, above the player sprite

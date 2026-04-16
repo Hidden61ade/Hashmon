@@ -1,0 +1,31 @@
+graph TD
+    U[Player] --> MM[MetaMask Wallet]
+    U --> FE[Hashmon Frontend]
+
+    subgraph Frontend[Phaser 3 Application Layer]
+        S1[Start Scene]
+        S2[Web3 Hub]
+        S3[Inventory Scene]
+        S4[Battle Scene]
+        S5[Garden Scene]
+        CP[Companion Protocol Layer]
+    end
+
+    FE --> S1
+    FE --> S2
+    FE --> S3
+    FE --> S4
+    FE --> S5
+    S2 --> CP
+    S3 --> CP
+    S4 --> CP
+    S5 --> CP
+
+    MM --> ETH[Ethers.js]
+    ETH --> NFT[HashmonNFT Contract]
+    ETH --> MKT[Marketplace Contract]
+
+    NFT --> IPFS[IPFS / Pinata Metadata]
+    MKT --> NFT
+    CP --> IPFS
+    CP --> NFT

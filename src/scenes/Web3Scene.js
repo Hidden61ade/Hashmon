@@ -277,7 +277,9 @@ export class Web3Scene extends Phaser.Scene {
             this.contentGroup.add(cardBg);
 
             // Sprite
-            this.contentGroup.add(this.add.image(cx + 55, cy + 80, nft.customTextureKey || species.textureKey).setScale(2.5));
+            const nftImage = this.add.image(cx + 55, cy + 80, nft.customTextureKey || species.textureKey);
+            this.fitImageToBox(nftImage, 90, 90);
+            this.contentGroup.add(nftImage);
 
             // Token ID
             this.contentGroup.add(this.addText(cx + 120, cy + 14, nft.tokenId, '14px', '#666688'));
@@ -436,7 +438,9 @@ export class Web3Scene extends Phaser.Scene {
 
         const rightX = cardX + 610;
         this.contentGroup.add(this.addText(rightX, cardY + 95, 'Preview', '18px', '#ffdd88').setOrigin(0.5));
-        this.contentGroup.add(this.add.image(rightX, cardY + 190, previewTexture).setScale(4));
+        const previewImage = this.add.image(rightX, cardY + 190, previewTexture);
+        this.fitImageToBox(previewImage, 150, 150);
+        this.contentGroup.add(previewImage);
         this.contentGroup.add(this.addText(rightX, cardY + 255, draft.nickname, '20px', '#ffffff').setOrigin(0.5));
         this.contentGroup.add(this.addText(rightX, cardY + 282, `${draft.speciesKey} / ${draft.customType}`, '13px', '#88ccff').setOrigin(0.5));
         this.contentGroup.add(this.addText(rightX, cardY + 312, `Moves: ${(draft.selectedMoves || []).length}/4`, '13px', '#cccccc').setOrigin(0.5));
@@ -988,6 +992,14 @@ export class Web3Scene extends Phaser.Scene {
     // ═══════════════════════════════════════════════════════════
     // UI HELPERS
     // ═══════════════════════════════════════════════════════════
+
+    fitImageToBox(image, maxWidth, maxHeight) {
+        const sourceWidth = image.width || image.displayWidth || 1;
+        const sourceHeight = image.height || image.displayHeight || 1;
+        const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+        image.setScale(scale);
+        return image;
+    }
 
     addText(x, y, content, fontSize, color) {
         return this.add.text(x, y, content, {
