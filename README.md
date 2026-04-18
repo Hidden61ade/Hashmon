@@ -1,12 +1,12 @@
-# Hashmon
+<h1 align="center">Hashmon</h1>
 
 <p align="center">
-  <img src="thumbnail.png" alt="Hashmon cover" width="720"/>
+  <img src="FTE4312/HashmonLogo.jpg" alt="Hashmon logo" width="560"/>
 </p>
 
 <p align="center">
-  <strong>A completed Phaser 3 + Web3 monster companion game prototype</strong><br/>
-  Connect wallet, mint NFT companions, reuse them across scenes, and demonstrate cross-game interoperability.
+  <strong>A User-Generated, Cross-Game Digital Companion Ecosystem</strong><br/>
+  A completed Web3 monster companion prototype with wallet connection, NFT minting, scene reuse, and marketplace interaction.
 </p>
 
 <p align="center">
