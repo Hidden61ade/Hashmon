@@ -1,3 +1,5 @@
+[English](README_en.md) | [中文](README.md)
+
 <h1 align="center">Hashmon</h1>
 
 <p align="center">
@@ -53,9 +55,7 @@ Hashmon 给出的答案是：通过 NFT 身份层、可移植元数据结构与�
 - Marketplace 的 List / Buy 演示闭环
 - Battle Scene 与 Garden Scene 的跨场景 NFT 复用
 - Cross-Game Interoperability Proof 可视化展示
-- 完整课程报告、截图资产与 Overleaf 论文材料
 
-换句话说，这个仓库已经不是早期 demo，而是一个适合课程展示、答辩和后续扩展的“完成版原型”。
 
 ---
 
@@ -71,7 +71,7 @@ Hashmon 给出的答案是：通过 NFT 身份层、可移植元数据结构与�
 同一只 NFT 不仅能被展示，还能以“Active Companion”的形式进入 Battle 与 Garden 两种环境，并以不同语义解释同一组 portable attributes。
 
 ### 4. 课程项目展示友好
-整个前端结构轻量、清晰、可直接本地运行，并配有报告、图表、截图与部署文档，方便答辩与演示。
+整个前端结构轻量、清晰、可直接本地运行。
 
 ---
 
@@ -149,8 +149,6 @@ Hashmon 的整体结构可以理解为 4 层：
 4. **Storage Layer**
    - IPFS / Pinata 存储 metadata 与用户上传图片
 
-这让项目既保留了游戏演示的直观性，也具备链上资产所有权和可扩展性的表达能力。
-
 ---
 
 ## 快速开始
@@ -197,23 +195,6 @@ npm run deploy:sepolia
 
 > 部署前请先配置好 .env 中的钱包私钥与 RPC。
 
----
-
-## 演示流程建议
-
-如果你希望向老师或面试官展示这个项目，可以按下面顺序操作：
-
-1. 打开首页，展示 Phaser 游戏入口
-2. 进入 Web3 Hub，连接 MetaMask
-3. 切换到 Sepolia 网络
-4. 打开 Create & Mint，自定义一只 Hashmon
-5. 上传图片并 Mint NFT
-6. 在 My NFTs / Inventory 中展示读取到的链上角色
-7. 将其设为 Active Companion
-8. 分别进入 Garden 与 Battle，展示同一只 NFT 的跨场景复用
-9. 打开 Marketplace，展示上架 / 购买闭环
-
-这是一条非常适合课程答辩的完整叙事链。
 
 ---
 
@@ -269,7 +250,6 @@ Hashmon/
 - Phaser + NFT 集成示例
 - 区块链前端与 IPFS 原型开发参考
 - “跨游戏数字伙伴”概念验证
-- 学术报告 / 毕业设计早期方向探索
 
 ---
 

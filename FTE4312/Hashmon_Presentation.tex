@@ -1,333 +1,505 @@
 %===============================================================
-% Hashmon Technical Presentation
-% Style: Metropolis Beamer Theme
-% Audience: Educated Non-specialists
-% Images: Place all images in the Overleaf project root
+% Hashmon — Academic Technical Presentation
+% Theme: Metropolis (refined academic style)
+% Compile: pdfLaTeX or XeLaTeX on Overleaf
+% Images: All placed in Overleaf project root
 %===============================================================
 
-\documentclass[aspectratio=169, 11pt]{beamer}
+\documentclass[aspectratio=169, 10pt]{beamer}
 
 %---------------------------------------------------------------
-% Packages & Theme Configuration
+% Theme & Packages
 %---------------------------------------------------------------
-\usetheme[progressbar=frametitle]{metropolis}
+\usetheme[progressbar=frametitle, numbering=fraction, sectionpage=progressbar]{metropolis}
 \usepackage{appendixnumberbeamer}
+\usepackage{amsmath}
+\usepackage{array}
 \usepackage{booktabs}
-\usepackage{tikz}
 \usepackage{graphicx}
 \usepackage{hyperref}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
-\setbeamerfont{footnote}{size=\tiny}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit}
+
+%---------------------------------------------------------------
+% Academic Colour Palette (colorblind-safe, WCAG AA)
+%---------------------------------------------------------------
+\definecolor{positive}{HTML}{0173B2}
+\definecolor{negative}{HTML}{DE8F05}
+\definecolor{emphasis}{HTML}{029E73}
+\definecolor{neutral}{gray}{0.55}
+\definecolor{layerA}{HTML}{DAEAF6}   % blue tint
+\definecolor{layerB}{HTML}{FDE8D0}   % orange tint
+\definecolor{layerC}{HTML}{D4EFDF}   % green tint
+\definecolor{layerD}{HTML}{E8DAEF}   % purple tint
+
+\newcommand{\pos}[1]{\textcolor{positive}{#1}}
+\newcommand{\con}[1]{\textcolor{negative}{#1}}
+\newcommand{\HL}[1]{\textcolor{emphasis}{#1}}
+
+%---------------------------------------------------------------
+% Beamer Refinements
+%---------------------------------------------------------------
 \setbeamertemplate{navigation symbols}{}
+\setbeamerfont{footnote}{size=\tiny}
+\setbeamercolor{progress bar}{fg=positive, bg=positive!15}
 \metroset{block=fill}
 
 %---------------------------------------------------------------
-% Title Page Metadata
+% Reusable TikZ Styles
+%---------------------------------------------------------------
+\tikzset{
+  layer/.style={
+    rounded corners=3pt, fill=#1, draw=gray,
+    minimum width=11cm, minimum height=1.2cm,
+    font=\small, align=center, thick, text width=10.5cm,
+    inner sep=5pt
+  },
+  layer/.default=layerA,
+  flowbox/.style={
+    draw=gray!70, rounded corners=5pt, fill=positive!6,
+    minimum width=2.1cm, minimum height=0.95cm,
+    font=\small, align=center, thick
+  },
+  darrow/.style={-{Latex[length=2mm, width=1.6mm]}, semithick, color=neutral},
+  biarrow/.style={{Latex[length=2mm, width=1.6mm]}-{Latex[length=2mm, width=1.6mm]}, semithick, color=neutral}
+}
+
+%---------------------------------------------------------------
+% Title Page
 %---------------------------------------------------------------
 \title{Hashmon}
 \subtitle{A User-Generated, Cross-Game Digital Companion Ecosystem}
-\author{Baohua Fang \and 123090108}
-\date{April 2026}
+\author{Baohua Fang\\{\small Student ID: 123090108}}
+\date{FTE4312 --- Spring 2026}
 \institute{School of Science and Engineering}
-\titlegraphic{\hfill\includegraphics[width=0.28\linewidth,height=2.6cm,keepaspectratio]{HashmonLogo.jpg}}
+\titlegraphic{\hfill\includegraphics[width=0.24\linewidth,keepaspectratio]{HashmonLogo.jpg}}
 
 %===============================================================
-% Document Content Begins
-%===============================================================
 \begin{document}
+%===============================================================
 
 \maketitle
 
 %---------------------------------------------------------------
-% Slide 1: Outline
+% Outline
 %---------------------------------------------------------------
 \begin{frame}{Outline}
-    \vspace{0.5cm}
-    \begin{enumerate}
-        \item Motivation and problem
-        \item System and workflow
-        \item Prototype evidence
-        \item Results and value
-    \end{enumerate}
+  \tableofcontents
+\end{frame}
+
+%===============================================================
+\section{Motivation \& Problem}
+%===============================================================
+
+%---------------------------------------------------------------
+% Personal Motivation
+%---------------------------------------------------------------
+\begin{frame}{Personal Motivation}
+  \begin{columns}[T]
+    \begin{column}{0.42\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=5.2cm,keepaspectratio]{eevee.jpg}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \begin{alertblock}{A personal story}
+        I raised an Eevee that felt like a real companion ---
+        but its existence ended when the game did.
+      \end{alertblock}
+      \vspace{0.3cm}
+      \begin{itemize}
+        \item Emotional bond formed through gameplay
+        \item No way to export or reuse the companion
+        \item \HL{That regret inspired Hashmon}
+      \end{itemize}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 2: Personal Motivation
+% The Problem
 %---------------------------------------------------------------
-\begin{frame}{Personal Motivation: Why This Idea Matters}
-    \vspace{0.4cm}
-    \begin{columns}[T]
-        \begin{column}{0.42\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=5.2cm,keepaspectratio]{eevee.jpg}
-        \end{column}
-        \begin{column}{0.54\textwidth}
-            \textbf{\alert{A personal story}}
-            \vspace{0.3cm}
-            \begin{itemize}
-                \item I once raised an Eevee
-                \item It felt like a real companion
-                \item But the adventure ended there
-            \end{itemize}
-            \vspace{0.35cm}
-            \textbf{\alert{The regret}}
-            \vspace{0.3cm}
-            \begin{itemize}
-                \item I could not take it out
-                \item I could not keep exploring
-                \item That inspired Hashmon
-            \end{itemize}
-        \end{column}
-    \end{columns}
+\begin{frame}{The Problem: Companions Are Platform-Locked}
+  \begin{columns}[T]
+    \begin{column}{0.40\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{Pokemon.jpg}
+    \end{column}
+    \begin{column}{0.55\textwidth}
+      \textbf{Players invest:} time, emotion, creativity
+      \vspace{0.3cm}
+
+      \textbf{Current games provide:}
+      \begin{itemize}
+        \item \con{Closed ownership} --- assets locked to one platform
+        \item \con{No portability} --- cannot move across games
+        \item \con{No persistence} --- progress lost at shutdown
+      \end{itemize}
+      \vspace{0.3cm}
+      \begin{block}{Gap}
+        No lightweight framework lets players \emph{own} and
+        \emph{reuse} companions across game contexts.
+      \end{block}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 3: The Problem
+% Research Question & Contributions
 %---------------------------------------------------------------
-\begin{frame}{The Problem: Digital Companions Are Locked}
-    \vspace{0.4cm}
-    \begin{columns}[T]
-        \begin{column}{0.40\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=5.2cm,keepaspectratio]{Pokemon.jpg}
-        \end{column}
-        \begin{column}{0.56\textwidth}
-            \textbf{\alert{What players invest}}
-            \vspace{0.3cm}
-            \begin{itemize}
-                \item Time
-                \item Emotion
-                \item Creativity
-            \end{itemize}
-            \vspace{0.35cm}
-            \textbf{\alert{What current games allow}}
-            \vspace{0.3cm}
-            \begin{itemize}
-                \item Closed ownership
-                \item No portability
-                \item No persistence
-            \end{itemize}
-        \end{column}
-    \end{columns}
-    \footnote{Motivational image reference plus author-produced project screenshots.}
+\begin{frame}{Research Question \& Contributions}
+  \begin{alertblock}{Research Question}
+    Can a single NFT-based companion maintain meaningful identity
+    and utility across multiple independent game scenes?
+  \end{alertblock}
+  \vspace{0.4cm}
+  \textbf{Contributions:}
+  \begin{enumerate}
+    \item \pos{End-to-end prototype} integrating browser gameplay
+          with on-chain ownership (ERC-721)
+    \item \pos{Cross-scene reuse} --- one NFT drives battle,
+          garden, and marketplace contexts
+    \item \pos{Decentralised asset pipeline} via IPFS for
+          metadata and artwork storage
+    \item \pos{In-game marketplace} enabling peer-to-peer
+          companion trading on Sepolia testnet
+  \end{enumerate}
 \end{frame}
 
-%---------------------------------------------------------------
-% Slide 4: The Goal
-%---------------------------------------------------------------
-\begin{frame}{The Goal: Controlled Interoperability}
-    \vspace{0.4cm}
-    \begin{columns}[T]
-        \begin{column}{0.44\textwidth}
-            \begin{block}{Research question}
-                Can one NFT companion stay meaningful across scenes?
-            \end{block}
-            \vspace{0.2cm}
-            \begin{itemize}
-                \item One NFT
-                \item Shared identity
-                \item Multiple uses
-            \end{itemize}
-        \end{column}
-        \begin{column}{0.52\textwidth}
-            \centering
-            \begin{tikzpicture}[node distance=0.75cm, every node/.style={font=\small, align=center}]
-                \node[draw, rounded corners, minimum width=2.3cm, minimum height=0.9cm] (a) {Create};
-                \node[draw, rounded corners, right=0.55cm of a, minimum width=2.3cm, minimum height=0.9cm] (b) {Mint};
-                \node[draw, rounded corners, right=0.55cm of b, minimum width=2.3cm, minimum height=0.9cm] (c) {Own};
-                \node[draw, rounded corners, below=1.0cm of b, minimum width=2.3cm, minimum height=0.9cm] (d) {Reuse};
-                \draw[-{Latex[length=2.8mm]}, thick] (a) -- (b);
-                \draw[-{Latex[length=2.8mm]}, thick] (b) -- (c);
-                \draw[-{Latex[length=2.8mm]}, thick] (b) -- (d);
-            \end{tikzpicture}
-        \end{column}
-    \end{columns}
-\end{frame}
+%===============================================================
+\section{System Design}
+%===============================================================
 
 %---------------------------------------------------------------
-% Slide 5: System Architecture
+% System Architecture
 %---------------------------------------------------------------
 \begin{frame}{System Architecture}
-    \vspace{0.2cm}
-    \begin{columns}[T]
-        \begin{column}{0.24\textwidth}
-            \centering
-            \includegraphics[width=0.72\linewidth,height=1.0cm,keepaspectratio]{HashmonLogo.jpg}\\[0.15cm]
-            \includegraphics[width=0.72\linewidth,height=0.9cm,keepaspectratio]{PhaserLogo.png}\\[0.25cm]
-            \textbf{Game Client}\\Scenes and UI
-        \end{column}
-        \begin{column}{0.24\textwidth}
-            \centering
-            \includegraphics[width=0.72\linewidth,height=0.9cm,keepaspectratio]{MetaMaskLogo.png}\\[0.15cm]
-            \includegraphics[width=0.72\linewidth,height=0.65cm,keepaspectratio]{etherjs.jpg}\\[0.25cm]
-            \textbf{Wallet Layer}\\Sign and read
-        \end{column}
-        \begin{column}{0.24\textwidth}
-            \centering
-            \includegraphics[width=0.72\linewidth,height=0.9cm,keepaspectratio]{SepoilaLogo.png}\\[0.25cm]
-            \textbf{Blockchain}\\Sepolia ERC-721
-        \end{column}
-        \begin{column}{0.24\textwidth}
-            \centering
-            \fbox{\parbox[c][0.9cm][c]{0.72\linewidth}{\centering\textbf{IPFS}}}\\[0.25cm]
-            \textbf{Storage Layer}\\Metadata and art
-        \end{column}
-    \end{columns}
+  \vspace{0.05cm}
+  %--- Logo row ---
+  \begin{columns}[T]
+    \begin{column}{0.24\textwidth}
+      \centering
+      \includegraphics[width=0.60\linewidth,height=0.80cm,keepaspectratio]{HashmonLogo.jpg}\\[0.04cm]
+      \includegraphics[width=0.60\linewidth,height=0.70cm,keepaspectratio]{PhaserLogo.png}\\[0.08cm]
+      {\footnotesize\textbf{Game Client}}
+    \end{column}
+    \begin{column}{0.24\textwidth}
+      \centering
+      \includegraphics[width=0.60\linewidth,height=0.70cm,keepaspectratio]{MetaMaskLogo.png}\\[0.04cm]
+      \includegraphics[width=0.60\linewidth,height=0.50cm,keepaspectratio]{etherjs.jpg}\\[0.08cm]
+      {\footnotesize\textbf{Wallet Layer}}
+    \end{column}
+    \begin{column}{0.24\textwidth}
+      \centering
+      \includegraphics[width=0.60\linewidth,height=0.70cm,keepaspectratio]{SepoilaLogo.png}\\[0.52cm]
+      {\footnotesize\textbf{Blockchain}}
+    \end{column}
+    \begin{column}{0.24\textwidth}
+      \centering
+      \fbox{\parbox[c][0.70cm][c]{0.60\linewidth}{\centering\textbf{IPFS}}}\\[0.52cm]
+      {\footnotesize\textbf{Storage Layer}}
+    \end{column}
+  \end{columns}
 
-    \vspace{0.45cm}
-    \centering
-    \begin{tikzpicture}[every node/.style={font=\small, align=center}]
-        \node[draw, rounded corners, fill=blue!8, minimum width=2.2cm, minimum height=0.9cm] (a) at (0,0) {Phaser Client};
-        \node[draw, rounded corners, fill=orange!10, minimum width=2.4cm, minimum height=0.9cm] (b) at (3.4,0) {MetaMask + Ethers};
-        \node[draw, rounded corners, fill=green!10, minimum width=2.3cm, minimum height=0.9cm] (c) at (6.8,0) {NFT Contracts};
-        \node[draw, rounded corners, fill=purple!10, minimum width=2.5cm, minimum height=0.9cm] (d) at (3.4,-1.6) {IPFS Metadata};
-        \draw[-{Latex[length=3mm]}, thick] (a) -- (b);
-        \draw[-{Latex[length=3mm]}, thick] (b) -- (c);
-        \draw[-{Latex[length=3mm]}, thick] (b) -- (d);
-        \draw[-{Latex[length=3mm]}, thick] (d.east) -| (c.south);
-    \end{tikzpicture}
+  \vspace{0.15cm}
+  %--- Layered architecture diagram ---
+  \centering
+  \begin{tikzpicture}[node distance=0.22cm]
+    \node[layer=layerA, minimum height=0.80cm] (L4) {%
+      \textbf{Presentation} \enspace$\cdot$\enspace
+      {\footnotesize Phaser\,3 \enspace$\cdot$\enspace
+       Scene Manager \enspace$\cdot$\enspace UI}};
+
+    \node[layer=layerB, minimum height=0.80cm, below=of L4] (L3) {%
+      \textbf{Integration} \enspace$\cdot$\enspace
+      {\footnotesize MetaMask \enspace$\cdot$\enspace
+       Ethers.js v6 \enspace$\cdot$\enspace Events}};
+
+    \node[layer=layerC, minimum height=0.80cm, below=of L3] (L2) {%
+      \textbf{Blockchain} \enspace$\cdot$\enspace
+      {\footnotesize ERC-721 \enspace$\cdot$\enspace
+       Sepolia \enspace$\cdot$\enspace OpenZeppelin}};
+
+    \node[layer=layerD, minimum height=0.80cm, below=of L2] (L1) {%
+      \textbf{Storage} \enspace$\cdot$\enspace
+      {\footnotesize IPFS / Pinata \enspace$\cdot$\enspace
+       JSON Metadata \enspace$\cdot$\enspace Pixel Art}};
+
+    \draw[biarrow] (L4) -- (L3);
+    \draw[biarrow] (L3) -- (L2);
+    \draw[biarrow] (L2) -- (L1);
+  \end{tikzpicture}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 6: Workflow
+% Workflow
 %---------------------------------------------------------------
 \begin{frame}{Workflow: From Creation to Reuse}
-    \vspace{0.5cm}
-    \centering
-    \begin{tikzpicture}[node distance=0.42cm, every node/.style={font=\small, align=center}]
-        \node[draw, rounded corners, minimum width=2.0cm, minimum height=1.1cm] (a) {Create};
-        \node[draw, rounded corners, right=of a, minimum width=2.0cm, minimum height=1.1cm] (b) {Upload};
-        \node[draw, rounded corners, right=of b, minimum width=2.0cm, minimum height=1.1cm] (c) {Mint};
-        \node[draw, rounded corners, right=of c, minimum width=2.0cm, minimum height=1.1cm] (d) {Sync};
-        \node[draw, rounded corners, below=1.0cm of c, minimum width=3.0cm, minimum height=1.1cm] (e) {Battle / Garden / Market};
+  \centering
+  \vspace{0.15cm}
+  \begin{tikzpicture}[node distance=0.55cm, every node/.style={font=\small, align=center}]
+    % Pipeline
+    \node[flowbox] (c) {Design};
+    \node[flowbox, right=of c] (u) {Upload\\IPFS};
+    \node[flowbox, right=of u] (m) {Mint\\ERC-721};
+    \node[flowbox, right=of m] (s) {Wallet\\Sync};
 
-        \draw[-{Latex[length=2.8mm]}, thick] (a) -- (b);
-        \draw[-{Latex[length=2.8mm]}, thick] (b) -- (c);
-        \draw[-{Latex[length=2.8mm]}, thick] (c) -- (d);
-        \draw[-{Latex[length=2.8mm]}, thick] (c) -- (e);
-    \end{tikzpicture}
+    % Scene targets
+    \node[flowbox, fill=layerA, below=1.3cm of u] (b) {Battle};
+    \node[flowbox, fill=layerC, below=1.3cm of m] (g) {Garden};
+    \node[flowbox, fill=layerB, below=1.3cm of s] (mk) {Market};
 
-    \vspace{0.45cm}
-    \begin{block}{Takeaway}
-        One companion can be created, owned, traded, and reused.
-    \end{block}
+    % Pipeline arrows
+    \draw[darrow] (c) -- (u);
+    \draw[darrow] (u) -- (m);
+    \draw[darrow] (m) -- (s);
+
+    % Fan-out from Sync to scenes
+    \path (s.south) ++(0,-0.4) coordinate (fork);
+    \draw[thick, color=neutral] (s.south) -- (fork);
+    \draw[thick, color=neutral] (fork) -- (fork -| b.north);
+    \draw[darrow] (fork -| b.north) -- (b.north);
+    \draw[darrow] (fork -| g.north) -- (g.north);
+    \draw[darrow] (fork) -- (mk.north);
+  \end{tikzpicture}
+
+  \vspace{0.35cm}
+  \begin{block}{Key Property}
+    A single NFT companion is created once, owned cryptographically,
+    and reused across all game scenes.
+  \end{block}
+\end{frame}
+
+%===============================================================
+\section{Prototype Evidence}
+%===============================================================
+
+%---------------------------------------------------------------
+% Create & Mint
+%---------------------------------------------------------------
+\begin{frame}{Evidence: Create \& Mint}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.8cm,keepaspectratio]{CreateMint.png}\\[0.12cm]
+      {\footnotesize\color{neutral}(a) Custom companion designer}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.8cm,keepaspectratio]{MyNFTs.png}\\[0.12cm]
+      {\footnotesize\color{neutral}(b) Wallet-synced NFT inventory}
+    \end{column}
+  \end{columns}
+  \vspace{0.25cm}
+  \begin{itemize}
+    \item Player designs pixel-art companion, mints as ERC-721
+    \item Inventory reflects on-chain ownership in real time
+  \end{itemize}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 7: Prototype Evidence
+% Cross-Scene Interoperability
 %---------------------------------------------------------------
-\begin{frame}{Prototype Evidence: Create and Mint}
-    \vspace{0.35cm}
-    \begin{columns}[T]
-        \begin{column}{0.48\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=4.9cm,keepaspectratio]{CreateMint.png}
-        \end{column}
-        \begin{column}{0.48\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=4.9cm,keepaspectratio]{MyNFTs.png}
-        \end{column}
-    \end{columns}
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item Custom companion
-        \item Wallet ownership
-        \item Live inventory sync
-    \end{itemize}
+\begin{frame}{Evidence: Cross-Scene Interoperability}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{BattleScene.png}\\[0.1cm]
+      {\footnotesize\color{neutral}(a) Battle --- stats-driven combat}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{GardenScene.png}\\[0.1cm]
+      {\footnotesize\color{neutral}(b) Garden --- mood and movement}
+    \end{column}
+  \end{columns}
+  \vspace{0.25cm}
+  \begin{block}{Observation}
+    The \emph{same} NFT drives behaviour in structurally different
+    game contexts, demonstrating controlled interoperability.
+  \end{block}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 8: Interoperability Proof
+% Marketplace
 %---------------------------------------------------------------
-\begin{frame}{Interoperability Proof Across Scenes}
-    \vspace{0.35cm}
-    \begin{columns}[T]
-        \begin{column}{0.48\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{BattleScene.png}
-            \vspace{0.15cm}
-            \begin{block}{Battle scene}
-                Combat stats drive action.
-            \end{block}
-        \end{column}
-        \begin{column}{0.48\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{GardenScene.png}
-            \vspace{0.15cm}
-            \begin{block}{Garden scene}
-                Mood and movement persist.
-            \end{block}
-        \end{column}
-    \end{columns}
+\begin{frame}{Evidence: Marketplace \& Ownership Loop}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.8cm,keepaspectratio]{MarketPlace.png}\\[0.1cm]
+      {\footnotesize\color{neutral}Peer-to-peer marketplace on Sepolia}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \vspace{0.2cm}
+      \textbf{Functionality:}
+      \begin{itemize}
+        \item List companions for sale
+        \item Browse all listed assets
+        \item Purchase via MetaMask
+        \item On-chain ownership transfer
+      \end{itemize}
+      \vspace{0.15cm}
+      \begin{exampleblock}{Implication}
+        Companions gain economic value
+        beyond gameplay utility.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+%===============================================================
+\section{Evaluation \& Conclusion}
+%===============================================================
+
+%---------------------------------------------------------------
+% Results & Limitations
+%---------------------------------------------------------------
+\begin{frame}{Results \& Current Limitations}
+  \centering
+  \vspace{0.1cm}
+  \begin{tabular}{
+    >{\raggedright}p{0.40\linewidth}
+    >{\raggedright\arraybackslash}p{0.40\linewidth}}
+    \toprule
+    \textbf{\pos{Prototype Demonstrates}} & \textbf{\con{Open Challenges}} \\
+    \midrule
+    Wallet-based authentication    & Multi-chain support \\
+    On-chain NFT minting (ERC-721) & Deeper gameplay mechanics \\
+    IPFS-hosted metadata \& art    & Cross-project standard adoption \\
+    Cross-scene companion reuse    & Game balance across contexts \\
+    Peer-to-peer marketplace       & UI polish \& user testing \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3cm}
+  \begin{block}{Summary}
+    Five core Web3 interactions verified end-to-end on Sepolia;
+    limitations are engineering scope, not architectural.
+  \end{block}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 9: Marketplace Value
+% Future Work
 %---------------------------------------------------------------
-\begin{frame}{Marketplace and Ownership Loop}
-    \vspace{0.45cm}
-    \begin{columns}[T]
-        \begin{column}{0.58\textwidth}
-            \centering
-            \includegraphics[width=\linewidth,height=4.8cm,keepaspectratio]{MarketPlace.png}
-        \end{column}
-        \begin{column}{0.38\textwidth}
-            \textbf{\alert{Why it matters}}
-            \vspace{0.3cm}
-            \begin{itemize}
-                \item List assets
-                \item Browse ownership
-                \item Buy on Sepolia
-                \item Add market value
-            \end{itemize}
-        \end{column}
-    \end{columns}
+\begin{frame}{Future Work}
+  \centering
+  \vspace{0.15cm}
+  \begin{tikzpicture}[node distance=0.5cm, every node/.style={font=\small, align=center}]
+    \node[flowbox, fill=layerA, minimum width=2.6cm] (s1) {Multi-chain\\Support};
+    \node[flowbox, fill=layerB, minimum width=2.6cm, right=of s1] (s2) {Richer\\Gameplay};
+    \node[flowbox, fill=layerC, minimum width=2.6cm, right=of s2] (s3) {Open\\Standard};
+    \node[flowbox, fill=layerD, minimum width=2.6cm, right=of s3] (s4) {Community\\Governance};
+
+    \draw[darrow] (s1) -- (s2);
+    \draw[darrow] (s2) -- (s3);
+    \draw[darrow] (s3) -- (s4);
+  \end{tikzpicture}
+
+  \vspace{0.4cm}
+  \begin{itemize}
+    \item Extend to Polygon / Arbitrum for lower transaction costs
+    \item Integrate evolution mechanics and breeding systems
+    \item Propose open companion metadata standard (EIP draft)
+    \item Transition marketplace governance to DAO structure
+  \end{itemize}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 10: Results Table
+% References (second-to-last, before Thank You)
 %---------------------------------------------------------------
-\begin{frame}{Results and Current Limits}
-    \vspace{0.3cm}
-    \centering
-    \begin{tabular}{p{0.39\linewidth}p{0.43\linewidth}}
-        \toprule
-        \textbf{Prototype proves} & \textbf{Still needs} \\
-        \midrule
-        Wallet connection & Larger scope \\
-        NFT minting & Deeper gameplay \\
-        IPFS storage & Wider standards \\
-        Scene reuse & More balancing \\
-        Marketplace flow & More polish \\
-        \bottomrule
-    \end{tabular}
+\begin{frame}{References}
+  \small
+  \begin{thebibliography}{6}
+    \bibitem{erc721}
+      W.\,Entriken et al.,
+      ``ERC-721: Non-Fungible Token Standard,''
+      Ethereum EIP, 2018.
+    \bibitem{ipfs}
+      J.\,Benet,
+      ``IPFS --- Content Addressed, Versioned, P2P File System,''
+      \textit{arXiv:1407.3561}, 2014.
+    \bibitem{oz}
+      OpenZeppelin,
+      ``Contracts Documentation,'' 2026.
+      \url{https://docs.openzeppelin.com/}
+    \bibitem{ethers}
+      Ethers.js,
+      ``Documentation v6,'' 2026.
+      \url{https://docs.ethers.org/}
+    \bibitem{phaser}
+      Phaser Studio,
+      ``Phaser 3 Documentation,'' 2026.
+      \url{https://docs.phaser.io/}
+    \bibitem{metamask}
+      MetaMask,
+      ``Developer Documentation,'' 2026.
+      \url{https://docs.metamask.io/}
+  \end{thebibliography}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 11: Conclusion
+% Thank You
 %---------------------------------------------------------------
 \begin{frame}[standout]
-    Hashmon\\[0.8em]
-    \large A player-owned companion can survive\\
-    across multiple gameplay contexts.\\[1.3em]
-    \normalsize Thank you
+  Hashmon\\[0.6em]
+  \large A player-owned companion can survive\\
+  across multiple gameplay contexts.\\[1.0em]
+  \normalsize Thank you\\[0.3em]
+  Questions welcome\\[0.8em]
+  \small\color{gray}{\textit{A full end-to-end demo video will be played next.}}
+\end{frame}
+
+%===============================================================
+\appendix
+%===============================================================
+
+%---------------------------------------------------------------
+% Backup Slide 1: Cross-Game Detail
+%---------------------------------------------------------------
+\begin{frame}{Backup: Cross-Game Interoperability Detail}
+  \centering
+  \includegraphics[width=0.62\linewidth,height=5.5cm,keepaspectratio]%
+    {StatusWithCrossGameInteroperabilityProof.png}\\[0.15cm]
+  {\footnotesize\color{neutral}
+   Same companion verified across Battle, Garden, and Inventory scenes.}
 \end{frame}
 
 %---------------------------------------------------------------
-% Slide 12: References
+% Backup Slide 2: Technology Stack
 %---------------------------------------------------------------
-\appendix
+\begin{frame}{Backup: Technology Stack}
+  \centering
+  \vspace{0.15cm}
+  \begin{tabular}{@{} l l l @{}}
+    \toprule
+    \textbf{Layer} & \textbf{Technology} & \textbf{Role} \\
+    \midrule
+    Frontend  & Phaser\,3 (JavaScript)   & Game engine \& scene management \\
+    Wallet    & MetaMask + Ethers.js\,v6 & Transaction signing \& reads \\
+    Contract  & Solidity + OpenZeppelin  & ERC-721 minting \& marketplace \\
+    Network   & Sepolia Testnet          & Public Ethereum test environment \\
+    Storage   & IPFS via Pinata          & Immutable metadata \& art hosting \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
 
-\begin{frame}[allowframebreaks]{References}
-    \small
-    \begin{itemize}
-        \item [1] Entriken, W., Shirley, D., Evans, J., \& Sachs, N. (2018). ERC-721: Non-Fungible Token Standard.
-        \item [2] Benet, J. (2014). IPFS: Content Addressed, Versioned, P2P File System. arXiv:1407.3561.
-        \item [3] OpenZeppelin. (2026). OpenZeppelin Contracts Documentation. https://docs.openzeppelin.com/
-        \item [4] Ethers.js. (2026). Documentation. https://docs.ethers.org/
-        \item [5] Phaser Studio. (2026). Phaser 3 Documentation. https://docs.phaser.io/
-        \item [6] MetaMask. (2026). Developer Documentation. https://docs.metamask.io/
-    \end{itemize}
+%---------------------------------------------------------------
+% Backup Slide 3: Smart Contract Interface
+%---------------------------------------------------------------
+\begin{frame}{Backup: Smart Contract Interface}
+  \centering
+  \vspace{0.1cm}
+  \begin{tabular}{@{} l p{7.2cm} @{}}
+    \toprule
+    \textbf{Function} & \textbf{Description} \\
+    \midrule
+    \texttt{mintNFT(to, uri)}     & Mint new companion with IPFS metadata URI \\
+    \texttt{tokenURI(id)}         & Retrieve metadata URI for a given token \\
+    \texttt{listForSale(id, p)}   & List companion on marketplace at price \texttt{p} \\
+    \texttt{buyNFT(id)}           & Purchase listed companion (payable) \\
+    \texttt{ownerOf(id)}          & Query current owner address \\
+    \bottomrule
+  \end{tabular}
 \end{frame}
 
 \end{document}
