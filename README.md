@@ -12,6 +12,10 @@
 </p>
 
 <p align="center">
+  <b><a href="./demostration_video.mp4">▶️ 点击观看项目演示视频 (Demonstration Video)</a></b>
+</p>
+
+<p align="center">
   <img alt="Phaser" src="https://img.shields.io/badge/Phaser-3-1f6feb?style=for-the-badge" />
   <img alt="Ethers" src="https://img.shields.io/badge/Ethers-v6-6f42c1?style=for-the-badge" />
   <img alt="Solidity" src="https://img.shields.io/badge/Solidity-Sepolia-2ea44f?style=for-the-badge" />
